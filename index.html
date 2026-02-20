@@ -21,10 +21,10 @@
 </head>
 <body>
 
-    <h2 style="color: #1b4d21;">🧠 겹치지 않는 똑똑한 훈련</h2>
+    <h2 style="color: #1b4d21;">🧠 맞춤형 인지 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">최근 2회차 동안 나온 문제는<br>나오지 않도록 설정되었습니다!</p>
+            <p style="font-size: 1.4em; line-height: 1.6;">아버님께 딱 맞는 사진들로만<br>훈련 세트가 구성됩니다.</p>
             <button class="main-btn" onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
@@ -35,7 +35,6 @@
         let history = [];
         let sessionList = [];
 
-        // 고도화 문제 은행 (데이터 양이 많을수록 중복 제외 효과가 큽니다)
         const masterBank = [
             { name: "호랑이", ids: [50, 51, 52] }, { name: "사자", ids: [88, 89, 90] },
             { name: "코끼리", ids: [120, 121, 122] }, { name: "기린", ids: [210, 211, 212] },
@@ -55,26 +54,36 @@
         function initGame() {
             currentRound = 1; score = 0; history = [];
             
-            // 1. 저장된 최근 2회차(20개) 문제 이름 가져오기
             let usedNames = JSON.parse(localStorage.getItem('usedQuizNames') || "[]");
+            let badImages = JSON.parse(localStorage.getItem('badImages') || "{}"); // { "이미지URL": 횟수 }
 
-            // 2. 최근 사용된 이름을 제외한 나머지 후보군 생성
-            let availableBank = masterBank.filter(item => !usedNames.includes(item.name));
+            // 1. 최근 사용된 이름 제외 + 불량 사진 제외 로직
+            let availableBank = masterBank.map(item => {
+                // 각 항목의 ids 중 불량 목록에 없는 것만 필터링
+                let safeIds = item.ids.filter(id => {
+                    let url = `https://loremflickr.com/800/600/${encodeURIComponent(item.name)}?lock=${id}`;
+                    return (badImages[url] || 0) < 2;
+                });
+                return { ...item, ids: safeIds };
+            }).filter(item => item.ids.length > 0 && !usedNames.includes(item.name));
 
-            // 만약 남은 문제가 10개보다 적으면 저장소 초기화 후 다시 필터링
             if (availableBank.length < 10) {
                 usedNames = [];
-                availableBank = [...masterBank];
+                localStorage.setItem('usedQuizNames', JSON.stringify([]));
+                // 문제가 부족하면 다시 전체에서 검색
+                availableBank = masterBank.filter(item => {
+                    let safeIds = item.ids.filter(id => {
+                        let url = `https://loremflickr.com/800/600/${encodeURIComponent(item.name)}?lock=${id}`;
+                        return (badImages[url] || 0) < 2;
+                    });
+                    return safeIds.length > 0;
+                });
             }
 
-            // 3. 사용 가능한 문제 중 10개 무작위 추출
             sessionList = availableBank.sort(() => 0.5 - Math.random()).slice(0, 10);
 
-            // 4. 추출된 10개의 이름을 최근 사용 목록에 추가 (최대 20개 유지)
             let newUsedNames = [...usedNames, ...sessionList.map(item => item.name)];
-            if (newUsedNames.length > 20) {
-                newUsedNames = newUsedNames.slice(newUsedNames.length - 20);
-            }
+            if (newUsedNames.length > 20) newUsedNames = newUsedNames.slice(newUsedNames.length - 20);
             localStorage.setItem('usedQuizNames', JSON.stringify(newUsedNames));
 
             nextRound();
@@ -83,6 +92,7 @@
         function nextRound() {
             if (currentRound > 10) { showResult(); return; }
             let target = sessionList[currentRound - 1];
+            // 필터링된 안전한 ID 중 랜덤 선택
             let selectedId = target.ids[Math.floor(Math.random() * target.ids.length)];
             let imgUrl = `https://loremflickr.com/800/600/${encodeURIComponent(target.name)}?lock=${selectedId}`;
             
@@ -93,13 +103,13 @@
                 .map(i => i.name);
             
             let choices = [...distractors, target.name].sort(() => 0.5 - Math.random());
-            currentQuizData = { url: imgUrl, name: target.name, choices: choices };
+            currentQuizData = { url: imgUrl, name: target.name, choices: choices, id: selectedId };
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <p style="font-weight:bold; color:#2E7D32;">${currentRound}단계</p>
                     <img src="${imgUrl}">
-                    <p style="margin-top:10px;"><span class="timer-badge">무엇인지 기억하세요</span></p>
+                    <p style="margin-top:10px;"><span class="timer-badge">기억하세요</span></p>
                 </div>
             `;
             setTimeout(askQuestion, 2500);
@@ -122,38 +132,19 @@
 
         function handleAnswer(userAns) {
             let isCorrect = (userAns === currentQuizData.name);
+            let isNone = (userAns === '없음');
+
+            // [핵심] '없음'을 눌렀을 때 불량 이미지 점수 가산
+            if (isNone) {
+                let badImages = JSON.parse(localStorage.getItem('badImages') || "{}");
+                badImages[currentQuizData.url] = (badImages[currentQuizData.url] || 0) + 1;
+                localStorage.setItem('badImages', JSON.stringify(badImages));
+            }
+
             if (isCorrect) score++;
-            history.push({url: currentQuizData.url, ok: isCorrect, name: currentQuizData.name, none: (userAns === '없음')});
+            history.push({url: currentQuizData.url, ok: isCorrect, name: currentQuizData.name, none: isNone});
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : (userAns === '없음' ? '#78909C' : '#d32f2f')};">
-                        ${isCorrect ? '정답!! ⭕' : (userAns === '없음' ? '넘어가기 ⏩' : '아쉬워요! ❌')}
-                    </div>
-                    <p style="font-size:1.3em;">정답은 <b>[ ${currentQuizData.name} ]</b></p>
-                </div>
-            `;
-            setTimeout(() => { currentRound++; nextRound(); }, 2000);
-        }
-
-        function showResult() {
-            let listHtml = history.map((item, idx) => `
-                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px; position:relative;">
-                    <img src="${item.url}" style="max-height: 15vh;">
-                    <div style="position:absolute; top:5px; right:5px; font-size:30px;">${item.ok ? '⭕' : (item.none ? '❓' : '❌')}</div>
-                    <p style="margin-top:10px;"><b>${idx+1}. 정답: ${item.name}</b></p>
-                </div>
-            `).join('');
-
-            document.getElementById('game-area').innerHTML = `
-                <div class="game-box">
-                    <h2 style="color:#2E7D32; font-size:2em;">최종 점수: ${score * 10}점</h2>
-                    <hr>${listHtml}
-                    <button class="main-btn" onclick="location.reload()">다시 시작하기</button>
-                </div>
-            `;
-            window.scrollTo(0,0);
-        }
-    </script>
-</body>
-</html>
+                    <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : (isNone ? '#78909C' : '#d32f2f')};">
+                        ${isCorrect ? '정답!! ⭕' : (isNone ? '
