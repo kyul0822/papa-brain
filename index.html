@@ -3,56 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>자연 낚시 두뇌 앱</title>
+    <title>기억하기</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2E7D32">
     <style>
         body { font-family: sans-serif; text-align: center; background: #eef5f1; padding: 15px; margin: 0; }
-        h2 { color: #2E7D32; margin-top: 20px; }
+        h2 { color: #2E7D32; margin-top: 20px; letter-spacing: 2px; }
         #status { font-weight: bold; margin-bottom: 10px; color: #1B5E20; font-size: 1.1em; }
         
         .img-container {
-            width: 100%;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-top: 10px;
-            min-height: 250px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100%; background: #000; border-radius: 12px; overflow: hidden;
+            margin-top: 10px; min-height: 250px; display: flex; align-items: center; justify-content: center;
         }
-        img {
-            width: 100%;
-            height: auto;
-            max-height: 55vh;
-            display: block;
-            object-fit: contain;
-        }
+        img { width: 100%; height: auto; max-height: 55vh; display: block; object-fit: contain; }
 
+        .game-box { background: white; padding: 25px; border-radius: 15px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        
         button { 
-            font-size: 20px; padding: 15px; margin: 8px 0; width: 100%; 
-            border-radius: 10px; border: none; background: #2E7D32; color: white; 
+            font-size: 22px; padding: 18px; margin: 10px 0; width: 100%; 
+            border-radius: 12px; border: none; background: #2E7D32; color: white; 
             cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-weight: bold;
         }
         button:active { background: #1B5E20; transform: translateY(2px); }
         
-        .btn-yes { background: #2E7D32; }
-        .btn-no { background: #558B2F; }
-        .btn-unknown { background: #78909C; }
-
         .progress-text { font-size: 1.1em; color: #2E7D32; margin-bottom: 5px; font-weight: bold; }
-        .timer-text { font-size: 1.2em; color: #d32f2f; font-weight: bold; margin-top: 10px; }
+        .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; margin-top: 10px; }
+        .question-text { font-size: 1.5em; font-weight: bold; color: #333; margin-bottom: 25px; line-height: 1.5; }
+
+        .reaction-correct { font-size: 3em; color: #2E7D32; font-weight: bold; margin: 20px 0; }
+        .reaction-wrong { font-size: 3em; color: #d32f2f; font-weight: bold; margin: 20px 0; }
+        
+        /* 시간 안내 강조 */
+        .time-badge { background: #ffeb3b; padding: 2px 8px; border-radius: 5px; color: #000; }
     </style>
 </head>
 <body>
 
-    <h2>🎣 자연 · 낚시 · 가족 두뇌</h2>
+    <h2>🧠 기억하기</h2>
     <div id="status"></div>
 
     <div id="game">
         <button onclick="startSession()">오늘의 훈련 시작 (10문제)</button>
-        <button onclick="showStats()" style="background:#f1f1f1; color:#333; font-size:16px;">기록 보기</button>
+        <button onclick="showStats()" style="background:#f1f1f1; color:#333; font-size:16px;">지난 기록 보기</button>
     </div>
 
     <script>
@@ -64,7 +57,17 @@
         let day = parseInt(localStorage.getItem("day")) || 1;
         let currentRound = 0;
         let sessionSuccess = 0;
-        let currentKeyword = ""; // 현재 어떤 사진인지 저장
+        let currentType = {};
+
+        const questionBank = [
+            { kw: "korea,mountain", q: "사진 속 산에 '물(계곡/강)'이 보였나요?", a: ["네, 있어요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 },
+            { kw: "korea,river", q: "사진 속 물가 주변에 '나무'가 있었나요?", a: ["예, 있어요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 },
+            { kw: "korean,children,play", q: "사진 속 아이들이 무엇을 하고 있었나요?", a: ["놀고 있어요", "공부해요", "잠자고 있어요"], correctIdx: 0 },
+            { kw: "korean,people", q: "사진 속에 사람이 몇 명 있었나요?", a: ["여러 명 있어요", "한 명도 없어요", "기억이 안 나요"], correctIdx: 0 },
+            { kw: "korea,sea", q: "사진 속 장소는 어디인가요?", a: ["푸른 바다", "깊은 산속", "도심 빌딩"], correctIdx: 0 },
+            { kw: "korean,food", q: "사진에 음식이 있었나요?", a: ["네, 있어요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 },
+            { kw: "korea,village", q: "사진 속에 '집'이 보였나요?", a: ["네, 보여요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 }
+        ];
 
         updateStatus();
 
@@ -78,92 +81,17 @@
             loadQuestion();
         }
 
+        // 라운드별 기억 시간 계산 함수
+        function getTimerValue(round) {
+            if (round <= 2) return 10;
+            if (round <= 4) return 8;
+            if (round <= 6) return 6;
+            return 5;
+        }
+
         function loadQuestion() {
-            // 한국의 자연, 물고기, 아이들, 한국 사람 키워드 추가
-            const keywords = ["korea,nature", "korea,fish", "korean,child", "korean,family", "korea,mountain"];
-            currentKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+            currentType = questionBank[Math.floor(Math.random() * questionBank.length)];
+            let imgUrl = `https://loremflickr.com/600/400/${currentType.kw}?t=${new Date().getTime() + currentRound}`;
+            let waitTime = getTimerValue(currentRound); // 현재 라운드에 맞는 시간 가져오기
             
-            // 사진이 바뀌도록 타임스탬프 추가
-            let imgUrl = `https://loremflickr.com/600/400/${currentKeyword}?t=${new Date().getTime() + currentRound}`;
-            
-            document.getElementById("game").innerHTML = `
-                <div class="progress-text">${currentRound} / 10 번째 문제</div>
-                <div class="img-container">
-                    <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/600x400?text=사진을+불러오는+중...'">
-                </div>
-                <p class="timer-text">10초 동안 사진을 잘 보세요</p>
-            `;
-            
-            setTimeout(() => askQuestion(), 10000);
-        }
-
-        function askQuestion() {
-            // 키워드별 맞춤형 질문
-            let question = "";
-            if(currentKeyword.includes("child")) {
-                question = "방금 사진에 '아이'가 있었나요?";
-            } else if(currentKeyword.includes("family")) {
-                question = "방금 사진에 '사람'이 보였나요?";
-            } else if(currentKeyword.includes("fish")) {
-                question = "방금 사진에 '물고기'가 있었나요?";
-            } else {
-                question = "방금 사진에 '나무나 산'이 있었나요?";
-            }
-            
-            document.getElementById("game").innerHTML = `
-                <div class="progress-text">${currentRound} / 10 번째 문제</div>
-                <h3 style="margin-bottom:20px;">${question}</h3>
-                <button class="btn-yes" onclick="processResult(true)">네, 있어요</button>
-                <button class="btn-no" onclick="processResult(true)">아니요, 없어요</button>
-                <button class="btn-unknown" onclick="processResult(false)">잘 생각 안 남</button>
-            `;
-        }
-
-        function processResult(success) {
-            if (success) sessionSuccess++;
-            if (currentRound < 10) {
-                currentRound++;
-                loadQuestion();
-            } else {
-                finishSession();
-            }
-        }
-
-        function finishSession() {
-            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
-            rec.push({ d: new Date().toLocaleDateString(), day: day, level: level, score: sessionSuccess });
-            localStorage.setItem("rec", JSON.stringify(rec));
-
-            if (sessionSuccess >= 8 && level < 4) level++;
-            if (sessionSuccess < 5 && level > 1) level--;
-            
-            day++; 
-            localStorage.setItem("level", level);
-            localStorage.setItem("day", day);
-
-            document.getElementById("game").innerHTML = `
-                <div style="background:white; padding:30px; border-radius:15px;">
-                    <h3>오늘의 훈련 완료!</h3>
-                    <p style="font-size:1.2em;">성공 횟수: <strong>${sessionSuccess} / 10</strong></p>
-                    <p>수고하셨습니다. 내일 또 만나요!</p>
-                    <button onclick="location.reload()">처음 화면으로</button>
-                </div>
-            `;
-            updateStatus();
-        }
-
-        function showStats() {
-            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
-            let totalSessions = rec.length;
-            document.getElementById("game").innerHTML = `
-                <div style="background:white; padding:20px; border-radius:15px; text-align:left;">
-                    <h4 style="text-align:center;">누적 활동 기록</h4>
-                    <p>📅 총 훈련 횟수: ${totalSessions}회</p>
-                    <hr>
-                    <button onclick="location.reload()">뒤로 가기</button>
-                </div>
-            `;
-        }
-    </script>
-</body>
-</html>
+            document.getElementById("
