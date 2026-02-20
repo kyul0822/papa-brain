@@ -11,10 +11,9 @@
         h2 { color: #2E7D32; margin-top: 20px; }
         #status { font-weight: bold; margin-bottom: 10px; color: #1B5E20; font-size: 1.1em; }
         
-        /* 이미지 전체가 보이도록 수정 */
         .img-container {
             width: 100%;
-            background: #000; /* 사진 여백을 검은색으로 처리 */
+            background: #000;
             border-radius: 12px;
             overflow: hidden;
             margin-top: 10px;
@@ -22,9 +21,9 @@
         img {
             width: 100%;
             height: auto;
-            max-height: 60vh; /* 화면의 60%를 넘지 않게 */
+            max-height: 55vh;
             display: block;
-            object-fit: contain; /* 사진 전체가 비율대로 다 보이게 설정 */
+            object-fit: contain;
         }
 
         button { 
@@ -34,23 +33,22 @@
         }
         button:active { background: #1B5E20; transform: translateY(2px); }
         
-        /* 답변 버튼 색상 구분 */
         .btn-yes { background: #2E7D32; }
         .btn-no { background: #558B2F; }
         .btn-unknown { background: #78909C; }
 
-        #game { margin-top: 20px; }
+        .progress-text { font-size: 1.1em; color: #2E7D32; margin-bottom: 5px; font-weight: bold; }
         .timer-text { font-size: 1.2em; color: #d32f2f; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <h2>🎣 자연 · 낚시 두뇌 30일</h2>
+    <h2>🎣 자연 · 낚시 두뇌</h2>
     <div id="status"></div>
 
     <div id="game">
-        <button onclick="startGame()">오늘의 훈련 시작하기</button>
-        <button onclick="showStats()" style="background:#f1f1f1; color:#333; font-size:16px;">지난 기록 보기</button>
+        <button onclick="startSession()">오늘의 훈련 시작 (10문제)</button>
+        <button onclick="showStats()" style="background:#f1f1f1; color:#333; font-size:16px;">기록 보기</button>
     </div>
 
     <script>
@@ -60,20 +58,34 @@
 
         let level = parseInt(localStorage.getItem("level")) || 1;
         let day = parseInt(localStorage.getItem("day")) || 1;
-        document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 단계: " + level;
+        let currentRound = 0; // 현재 몇 번째 문제인지
+        let sessionSuccess = 0; // 이번 세션 성공 횟수
+        
+        updateStatus();
 
-        function startGame() {
+        function updateStatus() {
+            document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 단계: " + level;
+        }
+
+        // 10문제 세션 시작
+        function startSession() {
+            currentRound = 1;
+            sessionSuccess = 0;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
             let keyword = Math.random() > 0.5 ? "nature,forest" : "fishing,fish";
-            let imgUrl = `https://loremflickr.com/600/400/${keyword}?t=${new Date().getTime()}`;
+            let imgUrl = `https://loremflickr.com/600/400/${keyword}?t=${new Date().getTime() + currentRound}`;
             
             document.getElementById("game").innerHTML = `
+                <div class="progress-text">${currentRound} / 10 번째 문제</div>
                 <div class="img-container">
                     <img src="${imgUrl}">
                 </div>
                 <p class="timer-text">10초 동안 사진을 잘 보세요</p>
             `;
             
-            // 10초 뒤 질문 화면으로 전환
             setTimeout(() => askQuestion(), 10000);
         }
 
@@ -84,46 +96,61 @@
                      "사진 속 장소가 '강'이나 '호수'였나요?"];
             
             document.getElementById("game").innerHTML = `
+                <div class="progress-text">${currentRound} / 10 번째 문제</div>
                 <h3 style="margin-bottom:20px;">${q[level-1]}</h3>
-                <button class="btn-yes" onclick="finish(true)">네, 있어요</button>
-                <button class="btn-no" onclick="finish(true)">아니요, 없어요</button>
-                <button class="btn-unknown" onclick="finish(false)">잘 생각 안 남</button>
+                <button class="btn-yes" onclick="processResult(true)">네, 있어요</button>
+                <button class="btn-no" onclick="processResult(true)">아니요, 없어요</button>
+                <button class="btn-unknown" onclick="processResult(false)">잘 생각 안 남</button>
             `;
         }
 
-        function finish(success) {
+        function processResult(success) {
+            if (success) sessionSuccess++;
+
+            // 난이도 미세 조정 (세션 내에서는 유지하고 세션 종료 시점에 반영)
+            if (currentRound < 10) {
+                currentRound++;
+                loadQuestion();
+            } else {
+                finishSession();
+            }
+        }
+
+        function finishSession() {
+            // 전체 기록 저장
             let rec = JSON.parse(localStorage.getItem("rec") || "[]");
-            rec.push({ d: new Date().toLocaleDateString(), day: day, level: level, ok: success });
+            rec.push({ d: new Date().toLocaleDateString(), day: day, level: level, score: sessionSuccess });
             localStorage.setItem("rec", JSON.stringify(rec));
 
-            // 난이도 조절 로직
-            if (success && level < 4) level++;
-            if (!success && level > 1) level--;
+            // 단계 조절: 10문제 중 8문제 이상 맞추면 단계 상승, 5문제 미만이면 하락
+            if (sessionSuccess >= 8 && level < 4) level++;
+            if (sessionSuccess < 5 && level > 1) level--;
             
             day++; 
-            if (day > 30) day = 1;
-
             localStorage.setItem("level", level);
             localStorage.setItem("day", day);
 
             document.getElementById("game").innerHTML = `
-                <h3>오늘 훈련 완료!</h3>
-                <p>내일 ${day}일차 훈련에서 만나요.</p>
-                <button onclick="location.reload()">처음 화면으로</button>
+                <div style="background:white; padding:30px; border-radius:15px;">
+                    <h3>오늘의 훈련 완료!</h3>
+                    <p style="font-size:1.2em;">성공 횟수: <strong>${sessionSuccess} / 10</strong></p>
+                    <p>내일 ${day}일차 훈련에서 만나요.</p>
+                    <button onclick="location.reload()">처음 화면으로</button>
+                </div>
             `;
+            updateStatus();
         }
 
         function showStats() {
             let rec = JSON.parse(localStorage.getItem("rec") || "[]");
-            let successCount = rec.filter(r => r.ok).length;
-            let failCount = rec.filter(r => !r.ok).length;
+            let totalSessions = rec.length;
+            
             document.getElementById("game").innerHTML = `
                 <div style="background:white; padding:20px; border-radius:15px; text-align:left;">
-                    <h4 style="text-align:center;">활동 기록 분석</h4>
-                    <p>✅ 정확히 기억한 횟수: ${successCount}회</p>
-                    <p>❓ 어려워하신 횟수: ${failCount}회</p>
+                    <h4 style="text-align:center;">누적 활동 기록</h4>
+                    <p>📅 총 훈련 횟수: ${totalSessions}회</p>
                     <hr>
-                    <p style="font-size:14px; color:#666;">※ '네' 혹은 '아니요'라고 확신 있게 대답하시면 성공으로 기록됩니다.</p>
+                    <p style="font-size:14px; color:#666;">※ 한 세션당 10문제씩 진행됩니다.</p>
                     <button onclick="location.reload()">뒤로 가기</button>
                 </div>
             `;
