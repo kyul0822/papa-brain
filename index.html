@@ -7,19 +7,52 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2E7D32">
     <style>
-        body { font-family: sans-serif; text-align: center; background: #eef5f1; padding: 15px; }
-        button { font-size: 20px; padding: 15px; margin: 10px; width: 95%; border-radius: 10px; border: none; background: #2E7D32; color: white; cursor: pointer; }
-        img { width: 95%; border-radius: 12px; margin-top: 10px; height: 250px; object-fit: cover; }
-        #status { font-weight: bold; margin-bottom: 10px; color: #1B5E20; }
+        body { font-family: sans-serif; text-align: center; background: #eef5f1; padding: 15px; margin: 0; }
+        h2 { color: #2E7D32; margin-top: 20px; }
+        #status { font-weight: bold; margin-bottom: 10px; color: #1B5E20; font-size: 1.1em; }
+        
+        /* 이미지 전체가 보이도록 수정 */
+        .img-container {
+            width: 100%;
+            background: #000; /* 사진 여백을 검은색으로 처리 */
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        img {
+            width: 100%;
+            height: auto;
+            max-height: 60vh; /* 화면의 60%를 넘지 않게 */
+            display: block;
+            object-fit: contain; /* 사진 전체가 비율대로 다 보이게 설정 */
+        }
+
+        button { 
+            font-size: 20px; padding: 15px; margin: 8px 0; width: 100%; 
+            border-radius: 10px; border: none; background: #2E7D32; color: white; 
+            cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:active { background: #1B5E20; transform: translateY(2px); }
+        
+        /* 답변 버튼 색상 구분 */
+        .btn-yes { background: #2E7D32; }
+        .btn-no { background: #558B2F; }
+        .btn-unknown { background: #78909C; }
+
+        #game { margin-top: 20px; }
+        .timer-text { font-size: 1.2em; color: #d32f2f; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
+
     <h2>🎣 자연 · 낚시 두뇌 30일</h2>
     <div id="status"></div>
+
     <div id="game">
-        <button onclick="startGame()">오늘 시작</button>
-        <button onclick="showStats()" style="background:#558B2F;">보호자 분석</button>
+        <button onclick="startGame()">오늘의 훈련 시작하기</button>
+        <button onclick="showStats()" style="background:#f1f1f1; color:#333; font-size:16px;">지난 기록 보기</button>
     </div>
+
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js');
@@ -27,26 +60,34 @@
 
         let level = parseInt(localStorage.getItem("level")) || 1;
         let day = parseInt(localStorage.getItem("day")) || 1;
-        document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 난이도 " + level;
+        document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 단계: " + level;
 
         function startGame() {
             let keyword = Math.random() > 0.5 ? "nature,forest" : "fishing,fish";
-            // 이미지 소스를 최신 버전으로 수정했습니다.
             let imgUrl = `https://loremflickr.com/600/400/${keyword}?t=${new Date().getTime()}`;
             
             document.getElementById("game").innerHTML = `
-                <img src="${imgUrl}"><br>
-                <p><strong>10초 동안 사진을 잘 기억하세요!</strong></p>
+                <div class="img-container">
+                    <img src="${imgUrl}">
+                </div>
+                <p class="timer-text">10초 동안 사진을 잘 보세요</p>
             `;
+            
+            // 10초 뒤 질문 화면으로 전환
             setTimeout(() => askQuestion(), 10000);
         }
 
         function askQuestion() {
-            let q = ["물이 있었나요?", "물고기가 보였나요?", "나무가 있었나요?", "강인가요? 호수인가요?"];
+            let q = ["방금 사진에 '물'이 있었나요?", 
+                     "방금 사진에 '물고기'가 보였나요?", 
+                     "방금 사진에 '나무'가 있었나요?", 
+                     "사진 속 장소가 '강'이나 '호수'였나요?"];
+            
             document.getElementById("game").innerHTML = `
-                <h3>${q[level-1]}</h3>
-                <button onclick="finish(true)">잘 생각남 😊</button>
-                <button onclick="finish(false)">어려움</button>
+                <h3 style="margin-bottom:20px;">${q[level-1]}</h3>
+                <button class="btn-yes" onclick="finish(true)">네, 있어요</button>
+                <button class="btn-no" onclick="finish(true)">아니요, 없어요</button>
+                <button class="btn-unknown" onclick="finish(false)">잘 생각 안 남</button>
             `;
         }
 
@@ -55,13 +96,21 @@
             rec.push({ d: new Date().toLocaleDateString(), day: day, level: level, ok: success });
             localStorage.setItem("rec", JSON.stringify(rec));
 
+            // 난이도 조절 로직
             if (success && level < 4) level++;
             if (!success && level > 1) level--;
-            day++; if (day > 30) day = 1;
+            
+            day++; 
+            if (day > 30) day = 1;
 
             localStorage.setItem("level", level);
             localStorage.setItem("day", day);
-            location.reload();
+
+            document.getElementById("game").innerHTML = `
+                <h3>오늘 훈련 완료!</h3>
+                <p>내일 ${day}일차 훈련에서 만나요.</p>
+                <button onclick="location.reload()">처음 화면으로</button>
+            `;
         }
 
         function showStats() {
@@ -69,10 +118,13 @@
             let successCount = rec.filter(r => r.ok).length;
             let failCount = rec.filter(r => !r.ok).length;
             document.getElementById("game").innerHTML = `
-                <div style="background:white; padding:20px; border-radius:15px; margin-top:20px;">
-                    <h4>활동 기록</h4>
-                    <p>성공: ${successCount}회 / 어려움: ${failCount}회</p>
-                    <button onclick="location.reload()">처음으로</button>
+                <div style="background:white; padding:20px; border-radius:15px; text-align:left;">
+                    <h4 style="text-align:center;">활동 기록 분석</h4>
+                    <p>✅ 정확히 기억한 횟수: ${successCount}회</p>
+                    <p>❓ 어려워하신 횟수: ${failCount}회</p>
+                    <hr>
+                    <p style="font-size:14px; color:#666;">※ '네' 혹은 '아니요'라고 확신 있게 대답하시면 성공으로 기록됩니다.</p>
+                    <button onclick="location.reload()">뒤로 가기</button>
                 </div>
             `;
         }
