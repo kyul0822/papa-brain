@@ -3,36 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>기억하기</title>
+    <title>아버님 두뇌 활력</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #eef5f1; padding: 15px; margin: 0; }
-        .game-box { background: white; padding: 20px; border-radius: 15px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background: #f0f7f4; padding: 15px; margin: 0; }
+        .game-box { background: white; padding: 25px; border-radius: 20px; margin-top: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); border: 2px solid #d1e7dd; }
         button { 
-            font-size: 22px; padding: 18px; margin: 10px 0; width: 100%; 
-            border-radius: 12px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
+            font-size: 24px; padding: 22px; margin: 12px 0; width: 100%; 
+            border-radius: 15px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
+            box-shadow: 0 4px 0 #1b4d21;
         }
-        button:active { background: #1B5E20; transform: scale(0.98); }
-        img { width: 100%; border-radius: 10px; margin-top: 10px; max-height: 50vh; object-fit: contain; background: #000; }
-        .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; margin: 10px 0; }
-        .reaction { font-size: 3.5em; font-weight: bold; margin: 20px 0; }
-        
-        .report-item { margin-bottom: 40px; border-bottom: 3px solid #2E7D32; padding-bottom: 20px; position: relative; text-align: center; }
-        .report-item img { width: 100%; height: auto; max-height: 300px; object-fit: cover; border-radius: 12px; }
-        .result-mark { 
-            position: absolute; top: 20px; right: 20px; font-size: 60px; 
-            background: rgba(255,255,255,0.9); border-radius: 50%; 
-            width: 80px; height: 80px; line-height: 80px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            text-align: center;
-        }
+        button:active { transform: translateY(3px); box-shadow: 0 1px 0 #1b4d21; }
+        img { width: 100%; border-radius: 15px; margin-top: 10px; max-height: 45vh; object-fit: contain; background: #000; }
+        .timer-badge { background: #ffeb3b; padding: 5px 15px; border-radius: 10px; color: #d32f2f; font-weight: bold; font-size: 1.3em; border: 2px solid #fbc02d; }
+        .reaction { font-size: 5.5em; font-weight: bold; margin: 20px 0; animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
+        .report-item { margin-bottom: 50px; border-bottom: 2px solid #2E7D32; padding-bottom: 30px; position: relative; }
+        .report-item img { width: 100%; height: auto; border-radius: 15px; }
+        .result-mark { position: absolute; top: 20px; right: 20px; font-size: 80px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 100px; height: 100px; line-height: 100px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: center; }
     </style>
 </head>
 <body>
 
-    <h2 style="color: #2E7D32;">🧠 기억력 훈련</h2>
+    <h2 style="color: #1b4d21;">🧠 기억력 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.2em;">매번 다른 질문과 사진으로 시작할까요?</p>
-            <button onclick="initGame()">오늘의 훈련 시작</button>
+            <p style="font-size: 1.4em; line-height: 1.6;">질문과 사진이 잘 맞도록 개선했어요!<br>훈련을 시작해볼까요?</p>
+            <button onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
 
@@ -43,43 +39,15 @@
         let usedSeeds = [];
         let currentQuizData = {};
 
-        // 질문 데이터 세트 (테마별 질문 다양화)
+        // 사진 검색 결과가 가장 확실한 테마와 질문들로 재구성
         const quizBank = [
-            { 
-                theme: "korea,mountain", 
-                questions: [
-                    { q: "사진 속에 '계곡물'이나 '강'이 있었나요?", a: true },
-                    { q: "산에 '바위'보다 '푸른 나무'가 많았나요?", a: true }
-                ]
-            },
-            { 
-                theme: "korea,palace", 
-                questions: [
-                    { q: "사진에 '기와지붕' 건물이 있었나요?", a: true },
-                    { q: "건물 주변에 '사람들'이 많이 있었나요?", a: true }
-                ]
-            },
-            { 
-                theme: "korea,river,fishing", 
-                questions: [
-                    { q: "물가에서 '낚시'하는 사람이 보였나요?", a: true },
-                    { q: "물 위에 '배'가 떠 있었나요?", a: true }
-                ]
-            },
-            { 
-                theme: "korean,village", 
-                questions: [
-                    { q: "마을 길가에 '논'이나 '밭'이 있었나요?", a: true },
-                    { q: "마을 골목에 '자동차'가 세워져 있었나요?", a: true }
-                ]
-            },
-            { 
-                theme: "korea,park,family", 
-                questions: [
-                    { q: "공원에 '꽃'이나 '잔디'가 많이 보였나요?", a: true },
-                    { q: "사진 속에 '어린아이'의 모습이 있었나요?", a: true }
-                ]
-            }
+            { theme: "nature,forest,mountain", q: "방금 본 사진에 '나무'나 '산'이 있었나요?", a: true },
+            { theme: "dog,puppy,pet", q: "사진 속에 귀여운 '강아지'가 보였나요?", a: true },
+            { theme: "underwater,fish,sea", q: "사진 속 장소가 '물속'이나 '바다'였나요?", a: true },
+            { theme: "children,kids,smile", q: "사진 속에 웃고 있는 '아이들'이 있었나요?", a: true },
+            { theme: "cat,kitten,pet", q: "사진 속에 귀여운 '고양이'가 보였나요?", a: true },
+            { theme: "ocean,beach,sea", q: "시원한 '바다'나 '모래사장'이 보였나요?", a: true },
+            { theme: "flower,garden,nature", q: "예쁘게 핀 '꽃'이나 '정원' 사진이었나요?", a: true }
         ];
 
         function initGame() {
@@ -89,39 +57,34 @@
 
         function nextRound() {
             if (currentRound > 10) { showResult(); return; }
-
-            let sec = (currentRound <= 2) ? 10 : (currentRound <= 4) ? 8 : (currentRound <= 6) ? 6 : 5;
-
-            // 중복 방지 로직
+            let sec = (currentRound <= 3) ? 10 : (currentRound <= 7) ? 8 : 6;
             let seed;
             do { seed = Math.floor(Math.random() * 100000); } while (usedSeeds.includes(seed));
             usedSeeds.push(seed);
 
-            // 랜덤 테마 및 그 테마 안의 랜덤 질문 선택
-            let bankItem = quizBank[Math.floor(Math.random() * quizBank.length)];
-            let qItem = bankItem.questions[Math.floor(Math.random() * bankItem.questions.length)];
+            // 랜덤 테마 선택
+            let qItem = quizBank[Math.floor(Math.random() * quizBank.length)];
             
-            let imgUrl = `https://loremflickr.com/640/480/${bankItem.theme}?lock=${seed}`;
-            
+            // 이미지 로딩 오류 방지 및 일치율을 높이기 위해 키워드 중복 적용
+            let imgUrl = `https://loremflickr.com/800/600/${qItem.theme}?lock=${seed}`;
             currentQuizData = { url: imgUrl, q: qItem.q, correct: qItem.a };
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-weight:bold; color:#2E7D32;">문제 ${currentRound} / 10</p>
-                    <img src="${imgUrl}">
-                    <p class="timer-text">${sec}초 동안 잘 기억하세요!</p>
+                    <p style="font-weight:bold; color:#2E7D32; font-size:1.2em;">${currentRound} / 10 번째</p>
+                    <img src="${imgUrl}" id="targetImg" onerror="this.src='https://via.placeholder.com/800x600?text=사진+불러오는+중...'">
+                    <p style="margin-top:15px;"><span class="timer-badge">${sec}초</span> 동안 잘 보세요!</p>
                 </div>
             `;
-
             setTimeout(askQuestion, sec * 1000);
         }
 
         function askQuestion() {
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-size:1.5em; font-weight:bold; margin-bottom:25px;">${currentQuizData.q}</p>
+                    <p style="font-size:1.7em; font-weight:bold; margin-bottom:30px; line-height:1.4;">${currentQuizData.q}</p>
                     <button onclick="handleAnswer(true)">네, 맞아요</button>
-                    <button onclick="handleAnswer(false)" style="background:#78909C;">아니요, 없어요</button>
+                    <button onclick="handleAnswer(false)" style="background:#78909C; margin-top:5px;">아니요, 없어요</button>
                 </div>
             `;
         }
@@ -134,30 +97,30 @@
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <div class="reaction" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
-                        ${isCorrect ? '정답!! ⭕' : '땡!! ❌'}
+                        ${isCorrect ? '정답!! ⭕' : '아쉬워요! ❌'}
                     </div>
-                    <p style="font-size:1.2em;">${isCorrect ? '참 잘하셨어요!' : '다음 사진을 더 잘 기억해봐요!'}</p>
+                    <p style="font-size:1.5em; font-weight:bold;">${isCorrect ? '참 잘하셨습니다!' : '괜찮아요, 다음 문제!'}</p>
                 </div>
             `;
-
-            setTimeout(() => { currentRound++; nextRound(); }, 1500);
+            setTimeout(() => { currentRound++; nextRound(); }, 1800);
         }
 
         function showResult() {
             let listHtml = history.map((item, idx) => `
                 <div class="report-item">
                     <img src="${item.url}">
-                    <div class="result-mark">${item.ok ? '⭕' : '❌'}</div>
-                    <p style="font-size:1.1em; font-weight:bold; margin-top:10px;">${idx + 1}번 질문: ${item.q}</p>
+                    <div class="result-mark" style="color:${item.ok ? '#2E7D32' : '#d32f2f'}">${item.ok ? '⭕' : '❌'}</div>
+                    <p style="font-size:1.3em; font-weight:bold; margin-top:20px;">질문: ${item.q}</p>
                 </div>
             `).join('');
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <h2 style="color:#2E7D32;">훈련 완료! ${score * 10}점</h2>
-                    <p>아래 사진들과 질문을 다시 확인해 보세요.</p>
+                    <h2 style="color:#2E7D32; font-size:2.2em;">최종 점수: ${score * 10}점</h2>
+                    <p style="font-size:1.2em; color:#555;">오늘 훈련한 사진들입니다.</p>
+                    <hr style="border:1px solid #eee; margin:20px 0;">
                     ${listHtml}
-                    <button onclick="location.reload()" style="margin-top:20px; background:#1B5E20;">다시 시작하기</button>
+                    <button onclick="location.reload()" style="background:#1B5E20; margin-top:20px;">한 번 더 하기</button>
                 </div>
             `;
             window.scrollTo(0,0);
