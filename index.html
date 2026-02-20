@@ -34,10 +34,9 @@
         .reaction-correct { font-size: 4em; color: #2E7D32; font-weight: bold; margin: 20px 0; }
         .reaction-wrong { font-size: 4em; color: #d32f2f; font-weight: bold; margin: 20px 0; }
         
-        /* 결과 리포트 스타일 */
         .report-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
         .report-item { background: #fff; border-radius: 8px; padding: 5px; position: relative; border: 1px solid #ddd; }
-        .report-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; max-height: none; }
+        .report-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
         .result-mark { position: absolute; top: 5px; right: 5px; font-size: 20px; background: rgba(255,255,255,0.8); border-radius: 50%; width: 28px; height: 28px; line-height: 28px; }
         
         .time-badge { background: #ffeb3b; padding: 2px 10px; border-radius: 8px; color: #000; border: 2px solid #fbc02d; }
@@ -62,8 +61,166 @@
         let day = parseInt(localStorage.getItem("day")) || 1;
         let currentRound = 0;
         let sessionSuccess = 0;
-        let currentType = {};
-        let sessionImages = []; // 이번 세션 사진 주소와 결과 저장용
+        let sessionImages = [];
+        let currentQuiz = {};
 
+        // 질문 은행 - 같은 키워드라도 여러 질문이 나오도록 확장
         const questionBank = [
-            { kw: "korea,mountain", q: "사진 속 산에 '물(계곡/강)'이 보였나요?", a: ["네, 있어요", "아니
+            { kw: "korea,mountain", qs: [
+                {q: "산에 '물(계곡/강)'이 보였나요?", a: ["네, 있어요", "아니요, 없어요", "모르겠어요"], c: 0},
+                {q: "산에 '바위'보다 '나무'가 많았나요?", a: ["네, 나무가 많아요", "아니요, 바위가 많아요", "모르겠어요"], c: 0}
+            ]},
+            { kw: "korea,river", qs: [
+                {q: "강가 주변에 '풀밭'이 있었나요?", a: ["네, 보여요", "아니요, 없어요", "모르겠어요"], c: 0},
+                {q: "물 위에 '배'가 떠 있었나요?", a: ["네, 떠 있어요", "아니요, 없어요", "모르겠어요"], c: 1}
+            ]},
+            { kw: "korean,children,play", qs: [
+                {q: "아이들이 '운동장'에서 놀고 있나요?", a: ["네, 맞아요", "아니요, 실내에요", "모르겠어요"], c: 0},
+                {q: "아이들이 '웃고' 있었나요?", a: ["네, 웃고 있어요", "아니요, 울고 있어요", "모르겠어요"], c: 0}
+            ]},
+            { kw: "korean,family,dinner", qs: [
+                {q: "사람들이 '식사'를 하고 있나요?", a: ["네, 식사 중이에요", "아니요, 산책 중이에요", "모르겠어요"], c: 0},
+                {q: "사진 속에 '아이'도 같이 있나요?", a: ["네, 있어요", "아니요, 어른뿐이에요", "모르겠어요"], c: 0}
+            ]},
+            { kw: "korea,palace", qs: [
+                {q: "한국의 '전통 기와집'인가요?", a: ["네, 기와집이에요", "아니요, 현대 건물이에요", "모르겠어요"], c: 0},
+                {q: "마당에 '꽃'이 피어 있었나요?", a: ["네, 피었어요", "아니요, 없어요", "모르겠어요"], c: 0}
+            ]}
+        ];
+
+        updateStatus();
+
+        function updateStatus() {
+            document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 단계: " + level;
+        }
+
+        function startSession() {
+            currentRound = 1; sessionSuccess = 0; sessionImages = [];
+            loadQuestion();
+        }
+
+        function getTimerValue(round) {
+            if (round <= 2) return 10;
+            if (round <= 4) return 8;
+            if (round <= 6) return 6;
+            return 5;
+        }
+
+        function loadQuestion() {
+            // 1. 랜덤 테마 선택
+            let theme = questionBank[Math.floor(Math.random() * questionBank.length)];
+            // 2. 테마 내 랜덤 질문 선택
+            let quizDetail = theme.qs[Math.floor(Math.random() * theme.qs.length)];
+            
+            currentQuiz = { 
+                kw: theme.kw, 
+                q: quizDetail.q, 
+                a: quizDetail.a, 
+                c: quizDetail.c 
+            };
+
+            // 3. 사진 주소에 랜덤값(seed)을 섞어 중복 방지
+            let seed = Math.floor(Math.random() * 10000);
+            let imgUrl = `https://loremflickr.com/600/400/${currentQuiz.kw}?lock=${seed}`;
+            currentQuiz.currentImg = imgUrl;
+
+            let waitTime = getTimerValue(currentRound); 
+
+            document.getElementById("game").innerHTML = `
+                <div class="progress-text">${currentRound} / 10</div>
+                <div class="img-container"><img src="${imgUrl}"></div>
+                <p class="timer-text"><span class="time-badge">${waitTime}초</span> 동안 잘 보세요!</p>
+            `;
+            
+            setTimeout(() => askQuestion(), waitTime * 1000);
+        }
+
+        function askQuestion() {
+            let optionsHtml = currentQuiz.a.map((ans, idx) => {
+                let color = idx === 2 ? "background:#78909C" : "";
+                return `<button style="${color}" onclick="showReaction(${idx})">${ans}</button>`;
+            }).join('');
+
+            document.getElementById("game").innerHTML = `
+                <div class="game-box">
+                    <div class="progress-text">${currentRound} / 10 번째 질문</div>
+                    <div class="question-text">${currentQuiz.q}</div>
+                    ${optionsHtml}
+                </div>
+            `;
+        }
+
+        function showReaction(userChoice) {
+            let isCorrect = (userChoice === currentQuiz.c);
+            sessionImages.push({ url: currentQuiz.currentImg, ok: isCorrect });
+
+            if (isCorrect) {
+                sessionSuccess++;
+                document.getElementById("game").innerHTML = `
+                    <div class="game-box">
+                        <div class="reaction-correct">정답!! ⭕</div>
+                        <div class="reaction-text">참 잘하셨어요!</div>
+                    </div>
+                `;
+            } else {
+                document.getElementById("game").innerHTML = `
+                    <div class="game-box">
+                        <div class="reaction-wrong">땡!! ❌</div>
+                        <div class="reaction-text">괜찮아요, 다음 문제!</div>
+                    </div>
+                `;
+            }
+            setTimeout(() => nextStep(), 1500);
+        }
+
+        function nextStep() {
+            if (currentRound < 10) {
+                currentRound++; loadQuestion();
+            } else {
+                finishSession();
+            }
+        }
+
+        function finishSession() {
+            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
+            rec.push({ d: new Date().toLocaleDateString(), score: sessionSuccess });
+            localStorage.setItem("rec", JSON.stringify(rec));
+
+            if (sessionSuccess >= 8 && level < 4) level++;
+            if (sessionSuccess < 5 && level > 1) level--;
+            day++; 
+            localStorage.setItem("level", level);
+            localStorage.setItem("day", day);
+
+            let reportHtml = sessionImages.map((item, idx) => `
+                <div class="report-item">
+                    <img src="${item.url}">
+                    <div class="result-mark">${item.ok ? '⭕' : '❌'}</div>
+                </div>
+            `).join('');
+
+            document.getElementById("game").innerHTML = `
+                <div class="game-box">
+                    <h3>오늘의 훈련 완료!</h3>
+                    <div style="font-size:1.8em; color:#2E7D32; font-weight:bold;">${sessionSuccess * 10}점</div>
+                    <div class="report-grid">${reportHtml}</div>
+                    <button onclick="location.reload()" style="margin-top:20px;">처음 화면으로</button>
+                </div>
+            `;
+            updateStatus();
+        }
+
+        function showStats() {
+            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
+            document.getElementById("game").innerHTML = `
+                <div class="game-box" style="text-align:left;">
+                    <h4 style="text-align:center;">누적 기록</h4>
+                    <p>📅 총 훈련 횟수: ${rec.length}회</p>
+                    <p>💡 마지막 점수: ${rec.length > 0 ? (rec[rec.length-1].score * 10) : 0}점</p>
+                    <button onclick="location.reload()">뒤로 가기</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
