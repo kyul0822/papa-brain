@@ -17,6 +17,10 @@
             border-radius: 12px;
             overflow: hidden;
             margin-top: 10px;
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         img {
             width: 100%;
@@ -43,7 +47,7 @@
 </head>
 <body>
 
-    <h2>🎣 자연 · 낚시 두뇌</h2>
+    <h2>🎣 자연 · 낚시 · 가족 두뇌</h2>
     <div id="status"></div>
 
     <div id="game">
@@ -58,16 +62,16 @@
 
         let level = parseInt(localStorage.getItem("level")) || 1;
         let day = parseInt(localStorage.getItem("day")) || 1;
-        let currentRound = 0; // 현재 몇 번째 문제인지
-        let sessionSuccess = 0; // 이번 세션 성공 횟수
-        
+        let currentRound = 0;
+        let sessionSuccess = 0;
+        let currentKeyword = ""; // 현재 어떤 사진인지 저장
+
         updateStatus();
 
         function updateStatus() {
             document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 단계: " + level;
         }
 
-        // 10문제 세션 시작
         function startSession() {
             currentRound = 1;
             sessionSuccess = 0;
@@ -75,13 +79,17 @@
         }
 
         function loadQuestion() {
-            let keyword = Math.random() > 0.5 ? "nature,forest" : "fishing,fish";
-            let imgUrl = `https://loremflickr.com/600/400/${keyword}?t=${new Date().getTime() + currentRound}`;
+            // 한국의 자연, 물고기, 아이들, 한국 사람 키워드 추가
+            const keywords = ["korea,nature", "korea,fish", "korean,child", "korean,family", "korea,mountain"];
+            currentKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+            
+            // 사진이 바뀌도록 타임스탬프 추가
+            let imgUrl = `https://loremflickr.com/600/400/${currentKeyword}?t=${new Date().getTime() + currentRound}`;
             
             document.getElementById("game").innerHTML = `
                 <div class="progress-text">${currentRound} / 10 번째 문제</div>
                 <div class="img-container">
-                    <img src="${imgUrl}">
+                    <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/600x400?text=사진을+불러오는+중...'">
                 </div>
                 <p class="timer-text">10초 동안 사진을 잘 보세요</p>
             `;
@@ -90,14 +98,21 @@
         }
 
         function askQuestion() {
-            let q = ["방금 사진에 '물'이 있었나요?", 
-                     "방금 사진에 '물고기'가 보였나요?", 
-                     "방금 사진에 '나무'가 있었나요?", 
-                     "사진 속 장소가 '강'이나 '호수'였나요?"];
+            // 키워드별 맞춤형 질문
+            let question = "";
+            if(currentKeyword.includes("child")) {
+                question = "방금 사진에 '아이'가 있었나요?";
+            } else if(currentKeyword.includes("family")) {
+                question = "방금 사진에 '사람'이 보였나요?";
+            } else if(currentKeyword.includes("fish")) {
+                question = "방금 사진에 '물고기'가 있었나요?";
+            } else {
+                question = "방금 사진에 '나무나 산'이 있었나요?";
+            }
             
             document.getElementById("game").innerHTML = `
                 <div class="progress-text">${currentRound} / 10 번째 문제</div>
-                <h3 style="margin-bottom:20px;">${q[level-1]}</h3>
+                <h3 style="margin-bottom:20px;">${question}</h3>
                 <button class="btn-yes" onclick="processResult(true)">네, 있어요</button>
                 <button class="btn-no" onclick="processResult(true)">아니요, 없어요</button>
                 <button class="btn-unknown" onclick="processResult(false)">잘 생각 안 남</button>
@@ -106,8 +121,6 @@
 
         function processResult(success) {
             if (success) sessionSuccess++;
-
-            // 난이도 미세 조정 (세션 내에서는 유지하고 세션 종료 시점에 반영)
             if (currentRound < 10) {
                 currentRound++;
                 loadQuestion();
@@ -117,12 +130,10 @@
         }
 
         function finishSession() {
-            // 전체 기록 저장
             let rec = JSON.parse(localStorage.getItem("rec") || "[]");
             rec.push({ d: new Date().toLocaleDateString(), day: day, level: level, score: sessionSuccess });
             localStorage.setItem("rec", JSON.stringify(rec));
 
-            // 단계 조절: 10문제 중 8문제 이상 맞추면 단계 상승, 5문제 미만이면 하락
             if (sessionSuccess >= 8 && level < 4) level++;
             if (sessionSuccess < 5 && level > 1) level--;
             
@@ -134,7 +145,7 @@
                 <div style="background:white; padding:30px; border-radius:15px;">
                     <h3>오늘의 훈련 완료!</h3>
                     <p style="font-size:1.2em;">성공 횟수: <strong>${sessionSuccess} / 10</strong></p>
-                    <p>내일 ${day}일차 훈련에서 만나요.</p>
+                    <p>수고하셨습니다. 내일 또 만나요!</p>
                     <button onclick="location.reload()">처음 화면으로</button>
                 </div>
             `;
@@ -144,13 +155,11 @@
         function showStats() {
             let rec = JSON.parse(localStorage.getItem("rec") || "[]");
             let totalSessions = rec.length;
-            
             document.getElementById("game").innerHTML = `
                 <div style="background:white; padding:20px; border-radius:15px; text-align:left;">
                     <h4 style="text-align:center;">누적 활동 기록</h4>
                     <p>📅 총 훈련 횟수: ${totalSessions}회</p>
                     <hr>
-                    <p style="font-size:14px; color:#666;">※ 한 세션당 10문제씩 진행됩니다.</p>
                     <button onclick="location.reload()">뒤로 가기</button>
                 </div>
             `;
