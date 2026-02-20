@@ -12,7 +12,11 @@
             border-radius: 12px; border: 2px solid #2E7D32; background: white; color: #2E7D32; 
             cursor: pointer; font-weight: bold;
         }
-        .choice-btn:active { background: #E8F5E9; transform: scale(0.98); }
+        .none-btn { 
+            font-size: 20px; padding: 15px; margin: 15px 0 6px 0; width: 100%; 
+            border-radius: 12px; border: 2px solid #78909C; background: #f1f3f4; color: #455A64; 
+            cursor: pointer; font-weight: bold;
+        }
         .main-btn { 
             font-size: 24px; padding: 20px; margin: 12px 0; width: 100%; 
             border-radius: 15px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
@@ -20,15 +24,14 @@
         img { width: 100%; border-radius: 15px; margin-top: 10px; max-height: 35vh; object-fit: contain; background: #000; }
         .timer-badge { background: #ffeb3b; padding: 5px 15px; border-radius: 10px; color: #d32f2f; font-weight: bold; font-size: 1.2em; border: 2px solid #fbc02d; }
         .feedback-mark { font-size: 4em; font-weight: bold; margin: 10px 0; }
-        .remind-text { font-size: 1.2em; color: #333; background: #f9f9f9; padding: 15px; border-radius: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <h2 style="color: #1b4d21;">🧠 우리 곁의 동·식물 이름 맞히기</h2>
+    <h2 style="color: #1b4d21;">🧠 헷갈림 방지 두뇌 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">사진을 보고 이름을 맞춰보세요!<br>총 10문제가 나옵니다.</p>
+            <p style="font-size: 1.4em; line-height: 1.6;">비슷한 이름에 속지 않도록<br>눈을 크게 뜨고 맞춰보세요!</p>
             <button class="main-btn" onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
@@ -38,23 +41,21 @@
         let score = 0;
         let history = [];
         
-        // 요청하신 모든 동식물 데이터 (주제 키워드 최적화)
-        const dataBank = [
-            // 동물 (Animal)
-            { name: "사자", t: "lion" }, { name: "호랑이", t: "tiger" }, { name: "표범", t: "leopard" }, { name: "치타", t: "cheetah" },
-            { name: "곰", t: "bear" }, { name: "늑대", t: "wolf" }, { name: "여우", t: "fox" }, { name: "하이에나", t: "hyena" },
-            { name: "코끼리", t: "elephant" }, { name: "기린", t: "giraffe" }, { name: "하마", t: "hippo" }, { name: "코뿔소", t: "rhino" },
-            { name: "얼룩말", t: "zebra" }, { name: "사슴", t: "deer" }, { name: "토끼", t: "rabbit" }, { name: "다람쥐", t: "squirrel" },
-            { name: "판다", t: "panda" }, { name: "캥거루", t: "kangaroo" }, { name: "말", t: "horse" }, { name: "소", t: "cow" },
-            { name: "독수리", t: "eagle" }, { name: "펭귄", t: "penguin" }, { name: "개구리", t: "frog" }, { name: "거북이", t: "turtle" },
-            { name: "고래", t: "whale" }, { name: "상어", t: "shark" }, { name: "문어", t: "octopus" }, { name: "나비", t: "butterfly" },
-            // 식물 (Plant)
-            { name: "민들레", t: "dandelion" }, { name: "강아지풀", t: "foxtail-grass" }, { name: "벚나무", t: "cherry-blossom" },
-            { name: "개나리", t: "forsythia" }, { name: "진달래", t: "azalea" }, { name: "소나무", t: "pine-tree" },
-            { name: "은행나무", t: "ginkgo-tree" }, { name: "무궁화", t: "hibiscus" }, { name: "해바라기", t: "sunflower" },
-            { name: "코스모스", t: "cosmos-flower" }, { name: "장미", t: "rose" }, { name: "수국", t: "hydrangea" },
-            { name: "나팔꽃", t: "morning-glory" }, { name: "목련", t: "magnolia" }, { name: "국화", t: "chrysanthemum" }
-            // ... (데이터는 여기에 계속 추가 가능)
+        // 동물을 포함한 식물 이름들을 특별 관리 대상으로 지정
+        const plantBank = [
+            { name: "강아지풀", t: "Setaria-viridis", avoid: "강아지" },
+            { name: "토끼풀", t: "Trifolium-repens", avoid: "토끼" },
+            { name: "닭의장풀", t: "Commelina-communis", avoid: "닭" },
+            { name: "애기똥풀", t: "Chelidonium-majus", avoid: "아기" },
+            { name: "벚나무", t: "cherry-blossom" }, { name: "개나리", t: "forsythia" },
+            { name: "진달래", t: "azalea" }, { name: "민들레", t: "dandelion" },
+            { name: "소나무", t: "pine-tree" }, { name: "해바라기", t: "sunflower" }
+        ];
+
+        const animalBank = [
+            { name: "강아지", t: "dog" }, { name: "토끼", t: "rabbit" }, { name: "닭", t: "chicken" },
+            { name: "사자", t: "lion" }, { name: "호랑이", t: "tiger" }, { name: "코끼리", t: "elephant" },
+            { name: "고양이", t: "cat" }, { name: "다람쥐", t: "squirrel" }, { name: "판다", t: "panda" }
         ];
 
         function initGame() {
@@ -65,29 +66,46 @@
         function nextRound() {
             if (currentRound > 10) { showResult(); return; }
             
-            let target = dataBank[Math.floor(Math.random() * dataBank.length)];
-            let seed = Math.floor(Math.random() * 10000);
+            // 동물과 식물 중 랜덤 선택
+            let isPlant = Math.random() > 0.5;
+            let targetBank = isPlant ? plantBank : animalBank;
+            let otherBank = isPlant ? animalBank : plantBank;
+            
+            let target = targetBank[Math.floor(Math.random() * targetBank.length)];
+            let seed = Math.floor(Math.random() * 30000);
             let imgUrl = `https://loremflickr.com/800/600/${target.t}?lock=${seed}`;
             
-            // 보기 4개 생성
-            let distractors = dataBank
-                .filter(a => a.name !== target.name)
-                .sort(() => 0.5 - Math.random())
-                .slice(0, 3)
-                .map(a => a.name);
+            // 보기 생성 로직 (헷갈리는 이름 차단)
+            let distractors = [];
+            
+            // 1. 같은 카테고리에서 오답 2개 추출 (헷갈리는 단어 제외)
+            let filteredTargetBank = targetBank.filter(item => 
+                item.name !== target.name && 
+                item.name !== (target.avoid || "") &&
+                !(item.avoid && item.avoid === target.name)
+            );
+            
+            // 2. 다른 카테고리에서 오답 1개 추출 (헷갈리는 단어 제외)
+            let filteredOtherBank = otherBank.filter(item => 
+                item.name !== target.name && 
+                item.name !== (target.avoid || "")
+            );
+
+            distractors.push(...filteredTargetBank.sort(() => 0.5 - Math.random()).slice(0, 2).map(i => i.name));
+            distractors.push(...filteredOtherBank.sort(() => 0.5 - Math.random()).slice(0, 1).map(i => i.name));
+            
             let choices = [...distractors, target.name].sort(() => 0.5 - Math.random());
             
             currentQuizData = { url: imgUrl, name: target.name, choices: choices };
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-weight:bold; color:#2E7D32;">${currentRound} / 10 문제</p>
-                    <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/800x600?text=사진+로딩중...'">
-                    <p style="margin-top:10px;"><span class="timer-badge">잘 살펴보세요</span></p>
+                    <p style="font-weight:bold; color:#2E7D32;">${currentRound} / 10</p>
+                    <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/800x600?text=사진+준비+중...'">
+                    <p style="margin-top:10px;"><span class="timer-badge">정답은 무엇일까요?</span></p>
                 </div>
             `;
-            
-            setTimeout(askQuestion, 3000);
+            setTimeout(askQuestion, 2000);
         }
 
         function askQuestion() {
@@ -97,9 +115,10 @@
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-size:1.6em; font-weight:bold; margin-bottom:15px;">이것의 이름은 무엇인가요?</p>
-                    <img src="${currentQuizData.url}" style="max-height: 25vh; margin-bottom:15px;">
+                    <p style="font-size:1.6em; font-weight:bold; margin-bottom:15px;">이름을 골라보세요</p>
+                    <img src="${currentQuizData.url}" style="max-height: 25vh; margin-bottom:10px;">
                     ${choiceButtons}
+                    <button class="none-btn" onclick="handleAnswer('없음')">아는 이름이 없음</button>
                 </div>
             `;
         }
@@ -107,12 +126,36 @@
         function handleAnswer(userAns) {
             let isCorrect = (userAns === currentQuizData.name);
             if (isCorrect) score++;
-            history.push({url: currentQuizData.url, ok: isCorrect, name: currentQuizData.name});
+            history.push({url: currentQuizData.url, ok: isCorrect, name: currentQuizData.name, none: (userAns === '없음')});
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
-                        ${isCorrect ? '정답!! ⭕' : '아쉬워요! ❌'}
+                        ${isCorrect ? '정답!! ⭕' : (userAns === '없음' ? '확인 ⏩' : '아쉬워요! ❌')}
                     </div>
-                    <div class="remind-text">
-                        이름: <b>${currentQuizData.name}</b><br>
+                    <p>정답: <b>${currentQuizData.name}</b></p>
+                </div>
+            `;
+            setTimeout(() => { currentRound++; nextRound(); }, 2000);
+        }
+
+        function showResult() {
+            let listHtml = history.map((item, idx) => `
+                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px;">
+                    <img src="${item.url}" style="max-height: 15vh;">
+                    <p><b>${idx+1}. 정답: ${item.name}</b> (${item.ok ? '⭕' : '❌'})</p>
+                </div>
+            `).join('');
+
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <h2 style="color:#2E7D32;">최종 점수: ${score * 10}점</h2>
+                    <hr>${listHtml}
+                    <button class="main-btn" onclick="location.reload()">다시 하기</button>
+                </div>
+            `;
+            window.scrollTo(0,0);
+        }
+    </script>
+</body>
+</html>
