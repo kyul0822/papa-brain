@@ -28,10 +28,10 @@
 </head>
 <body>
 
-    <h2 style="color: #1b4d21;">🧠 헷갈림 방지 두뇌 훈련</h2>
+    <h2 style="color: #1b4d21;">🧠 겹치지 않는 동·식물 퀴즈</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">비슷한 이름에 속지 않도록<br>눈을 크게 뜨고 맞춰보세요!</p>
+            <p style="font-size: 1.4em; line-height: 1.6;">매번 새로운 사진이 나옵니다.<br>10문제 모두 맞춰보세요!</p>
             <button class="main-btn" onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
@@ -40,59 +40,58 @@
         let currentRound = 1;
         let score = 0;
         let history = [];
-        
-        // 동물을 포함한 식물 이름들을 특별 관리 대상으로 지정
-        const plantBank = [
+        let sessionList = []; // 이번 게임에 사용될 10개의 중복 없는 목록
+
+        // 전체 데이터 (동물 + 식물)
+        const fullBank = [
+            // 식물 (중복 헷갈림 방지 포함)
             { name: "강아지풀", t: "Setaria-viridis", avoid: "강아지" },
             { name: "토끼풀", t: "Trifolium-repens", avoid: "토끼" },
             { name: "닭의장풀", t: "Commelina-communis", avoid: "닭" },
             { name: "애기똥풀", t: "Chelidonium-majus", avoid: "아기" },
-            { name: "벚나무", t: "cherry-blossom" }, { name: "개나리", t: "forsythia" },
-            { name: "진달래", t: "azalea" }, { name: "민들레", t: "dandelion" },
-            { name: "소나무", t: "pine-tree" }, { name: "해바라기", t: "sunflower" }
-        ];
-
-        const animalBank = [
+            { name: "민들레", t: "dandelion" }, { name: "벚꽃", t: "cherry-blossom" },
+            { name: "개나리", t: "forsythia" }, { name: "진달래", t: "azalea" },
+            { name: "해바라기", t: "sunflower" }, { name: "코스모스", t: "cosmos-flower" },
+            { name: "장미", t: "rose" }, { name: "소나무", t: "pine-tree" },
+            { name: "은행나무", t: "ginkgo-tree" }, { name: "단풍나무", t: "maple-tree" },
+            { name: "무궁화", t: "hibiscus" }, { name: "나팔꽃", t: "morning-glory" },
+            // 동물
             { name: "강아지", t: "dog" }, { name: "토끼", t: "rabbit" }, { name: "닭", t: "chicken" },
-            { name: "사자", t: "lion" }, { name: "호랑이", t: "tiger" }, { name: "코끼리", t: "elephant" },
-            { name: "고양이", t: "cat" }, { name: "다람쥐", t: "squirrel" }, { name: "판다", t: "panda" }
+            { name: "고양이", t: "cat" }, { name: "사자", t: "lion" }, { name: "호랑이", t: "tiger" },
+            { name: "코끼리", t: "elephant" }, { name: "기린", t: "giraffe" }, { name: "하마", t: "hippo" },
+            { name: "판다", t: "panda" }, { name: "다람쥐", t: "squirrel" }, { name: "펭귄", t: "penguin" },
+            { name: "거북이", t: "turtle" }, { name: "고래", t: "whale" }, { name: "금붕어", t: "goldfish" },
+            { name: "나비", t: "butterfly" }, { name: "사슴", t: "deer" }, { name: "코뿔소", t: "rhino" }
         ];
 
         function initGame() {
-            currentRound = 1; score = 0; history = [];
+            currentRound = 1; 
+            score = 0; 
+            history = [];
+            // 전체 은행에서 무작위로 10개 추출 (중복 없음)
+            sessionList = [...fullBank].sort(() => 0.5 - Math.random()).slice(0, 10);
             nextRound();
         }
 
         function nextRound() {
             if (currentRound > 10) { showResult(); return; }
             
-            // 동물과 식물 중 랜덤 선택
-            let isPlant = Math.random() > 0.5;
-            let targetBank = isPlant ? plantBank : animalBank;
-            let otherBank = isPlant ? animalBank : plantBank;
-            
-            let target = targetBank[Math.floor(Math.random() * targetBank.length)];
-            let seed = Math.floor(Math.random() * 30000);
+            let target = sessionList[currentRound - 1];
+            let seed = Math.floor(Math.random() * 50000);
             let imgUrl = `https://loremflickr.com/800/600/${target.t}?lock=${seed}`;
             
             // 보기 생성 로직 (헷갈리는 이름 차단)
-            let distractors = [];
-            
-            // 1. 같은 카테고리에서 오답 2개 추출 (헷갈리는 단어 제외)
-            let filteredTargetBank = targetBank.filter(item => 
-                item.name !== target.name && 
-                item.name !== (target.avoid || "") &&
-                !(item.avoid && item.avoid === target.name)
-            );
-            
-            // 2. 다른 카테고리에서 오답 1개 추출 (헷갈리는 단어 제외)
-            let filteredOtherBank = otherBank.filter(item => 
-                item.name !== target.name && 
-                item.name !== (target.avoid || "")
-            );
-
-            distractors.push(...filteredTargetBank.sort(() => 0.5 - Math.random()).slice(0, 2).map(i => i.name));
-            distractors.push(...filteredOtherBank.sort(() => 0.5 - Math.random()).slice(0, 1).map(i => i.name));
+            let distractors = fullBank
+                .filter(item => 
+                    item.name !== target.name && 
+                    item.name !== (target.avoid || "") &&
+                    !(target.name === "강아지" && item.name === "강아지풀") &&
+                    !(target.name === "토끼" && item.name === "토끼풀") &&
+                    !(target.name === "닭" && item.name === "닭의장풀")
+                )
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 3)
+                .map(i => i.name);
             
             let choices = [...distractors, target.name].sort(() => 0.5 - Math.random());
             
@@ -100,9 +99,9 @@
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-weight:bold; color:#2E7D32;">${currentRound} / 10</p>
-                    <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/800x600?text=사진+준비+중...'">
-                    <p style="margin-top:10px;"><span class="timer-badge">정답은 무엇일까요?</span></p>
+                    <p style="font-weight:bold; color:#2E7D32;">질문 ${currentRound} / 10</p>
+                    <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/800x600?text=사진+로딩+중...'">
+                    <p style="margin-top:10px;"><span class="timer-badge">이름이 무엇일까요?</span></p>
                 </div>
             `;
             setTimeout(askQuestion, 2000);
@@ -130,10 +129,10 @@
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
-                        ${isCorrect ? '정답!! ⭕' : (userAns === '없음' ? '확인 ⏩' : '아쉬워요! ❌')}
+                    <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : (userAns === '없음' ? '#78909C' : '#d32f2f')};">
+                        ${isCorrect ? '정답!! ⭕' : (userAns === '없음' ? '넘어가기 ⏩' : '아쉬워요! ❌')}
                     </div>
-                    <p>정답: <b>${currentQuizData.name}</b></p>
+                    <p style="font-size:1.2em;">정답은 <b>${currentQuizData.name}</b></p>
                 </div>
             `;
             setTimeout(() => { currentRound++; nextRound(); }, 2000);
@@ -141,9 +140,10 @@
 
         function showResult() {
             let listHtml = history.map((item, idx) => `
-                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px;">
+                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px; position:relative;">
                     <img src="${item.url}" style="max-height: 15vh;">
-                    <p><b>${idx+1}. 정답: ${item.name}</b> (${item.ok ? '⭕' : '❌'})</p>
+                    <div style="position:absolute; top:5px; right:5px; font-size:30px;">${item.ok ? '⭕' : '❌'}</div>
+                    <p><b>${idx+1}. 정답: ${item.name}</b></p>
                 </div>
             `).join('');
 
@@ -151,7 +151,7 @@
                 <div class="game-box">
                     <h2 style="color:#2E7D32;">최종 점수: ${score * 10}점</h2>
                     <hr>${listHtml}
-                    <button class="main-btn" onclick="location.reload()">다시 하기</button>
+                    <button class="main-btn" onclick="location.reload()">다시 시작하기</button>
                 </div>
             `;
             window.scrollTo(0,0);
