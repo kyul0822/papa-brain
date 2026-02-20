@@ -2,223 +2,134 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>기억하기</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2E7D32">
     <style>
         body { font-family: sans-serif; text-align: center; background: #eef5f1; padding: 15px; margin: 0; }
-        h2 { color: #2E7D32; margin-top: 20px; letter-spacing: 2px; }
-        #status { font-weight: bold; margin-bottom: 10px; color: #1B5E20; font-size: 1.1em; }
-        
-        .img-container {
-            width: 100%; background: #000; border-radius: 12px; overflow: hidden;
-            margin-top: 10px; min-height: 250px; display: flex; align-items: center; justify-content: center;
-        }
-        img { 
-            width: 100%; height: auto; max-height: 55vh; 
-            display: block; 
-            object-fit: contain; /* 사진 전체가 비율대로 다 보이게 함 */
-        }
-
-        .game-box { background: white; padding: 25px; border-radius: 15px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        
+        .game-box { background: white; padding: 20px; border-radius: 15px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         button { 
             font-size: 22px; padding: 18px; margin: 10px 0; width: 100%; 
-            border-radius: 12px; border: none; background: #2E7D32; color: white; 
-            cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            font-weight: bold;
+            border-radius: 12px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
         }
-        button:active { background: #1B5E20; transform: translateY(2px); }
+        img { width: 100%; border-radius: 10px; margin-top: 10px; max-height: 50vh; object-fit: contain; background: #000; }
+        .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; margin: 10px 0; }
+        .reaction { font-size: 3.5em; font-weight: bold; margin: 20px 0; }
         
-        .progress-text { font-size: 1.1em; color: #2E7D32; margin-bottom: 5px; font-weight: bold; }
-        .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; margin-top: 10px; }
-        .question-text { font-size: 1.5em; font-weight: bold; color: #333; margin-bottom: 25px; line-height: 1.5; }
-
-        .reaction-correct { font-size: 4em; color: #2E7D32; font-weight: bold; margin: 20px 0; }
-        .reaction-wrong { font-size: 4em; color: #d32f2f; font-weight: bold; margin: 20px 0; }
-        
-        .report-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
-        .report-item { background: #fff; border-radius: 8px; padding: 5px; position: relative; border: 1px solid #ddd; }
-        .report-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
-        .result-mark { position: absolute; top: 5px; right: 5px; font-size: 20px; background: rgba(255,255,255,0.8); border-radius: 50%; width: 28px; height: 28px; line-height: 28px; }
-        
-        .time-badge { background: #ffeb3b; padding: 2px 10px; border-radius: 8px; color: #000; border: 2px solid #fbc02d; }
+        /* 결과 화면 사진 크게 보기 스타일 */
+        .report-item { margin-bottom: 40px; border-bottom: 3px solid #2E7D32; padding-bottom: 20px; position: relative; text-align: center; }
+        .report-item img { width: 100%; height: auto; max-height: 300px; object-fit: cover; border-radius: 12px; }
+        .result-mark { 
+            position: absolute; top: 20px; right: 20px; font-size: 60px; 
+            background: rgba(255,255,255,0.9); border-radius: 50%; 
+            width: 80px; height: 80px; line-height: 80px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body>
 
-    <h2>🧠 기억하기</h2>
-    <div id="status"></div>
-
-    <div id="game">
-        <button onclick="startSession()">오늘의 훈련 시작 (10문제)</button>
-        <button onclick="showStats()" style="background:#f1f1f1; color:#333; font-size:16px;">지난 기록 보기</button>
+    <h2 style="color: #2E7D32;">🧠 기억력 훈련</h2>
+    <div id="game-area">
+        <div class="game-box">
+            <p style="font-size: 1.2em;">아버님, 오늘 훈련을 시작할까요?</p>
+            <button onclick="initGame()">오늘의 훈련 시작</button>
+        </div>
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js');
+        let currentRound = 1;
+        let score = 0;
+        let history = [];
+        let currentImgUrl = "";
+
+        // 한국적인 풍경 테마
+        const themes = ["korea,mountain,landscape", "korea,river,nature", "korea,palace,architecture", "korean,village,scenery"];
+
+        function initGame() {
+            currentRound = 1;
+            score = 0;
+            history = [];
+            nextRound();
         }
 
-        let level = parseInt(localStorage.getItem("level")) || 1;
-        let day = parseInt(localStorage.getItem("day")) || 1;
-        let currentRound = 0;
-        let sessionSuccess = 0;
-        let sessionImages = [];
-        let currentQuiz = {};
+        function nextRound() {
+            if (currentRound > 10) {
+                showResult();
+                return;
+            }
 
-        // 질문 은행 - 변별력이 뚜렷한 한국 관련 키워드로 재구성
-        const questionBank = [
-            { kw: "korea,mountain,landscape", qs: [
-                {q: "사진 속 산에 '계곡물'이 흐르고 있었나요?", a: ["네, 보여요", "아니요, 산만 보여요", "모르겠어요"], c: 0},
-                {q: "산 정상 부근에 '구름'이 많이 끼었나요?", a: ["네, 많아요", "아니요, 맑아요", "모르겠어요"], c: 0}
-            ]},
-            { kw: "korea,fishing,lake", qs: [
-                {q: "물가에 낚시를 하는 '사람'이 보였나요?", a: ["네, 보여요", "아니요, 없어요", "모르겠어요"], c: 0},
-                {q: "물 위에 '낚시 찌'나 '배'가 떠 있었나요?", a: ["네, 있어요", "아니요, 물만 보여요", "모르겠어요"], c: 0}
-            ]},
-            { kw: "korea,seoul,palace", qs: [
-                {q: "사진에 '기와지붕'이 있는 건물이 있었나요?", a: ["네, 기와집이에요", "아니요, 현대식 건물이에요", "모르겠어요"], c: 0},
-                {q: "마당이 '흙이나 모래'로 되어 있었나요?", a: ["네, 마당이에요", "아니요, 잔디나 아스팔트에요", "모르겠어요"], c: 0}
-            ]},
-            { kw: "korean,family,park", qs: [
-                {q: "공원에서 사람들이 '산책' 중이었나요?", a: ["네, 산책 중이에요", "아니요, 앉아 있어요", "모르겠어요"], c: 0},
-                {q: "사진 속에 '아이'의 모습이 보였나요?", a: ["네, 있어요", "아니요, 어른뿐이에요", "모르겠어요"], c: 0}
-            ]},
-            { kw: "korea,village,countryside", qs: [
-                {q: "마을 골목에 '강아지나 동물'이 있었나요?", a: ["네, 있어요", "아니요, 사람이나 건물뿐이에요", "모르겠어요"], c: 0},
-                {q: "집 주변에 '밭'이나 '논'이 보였나요?", a: ["네, 보여요", "아니요, 보이지 않아요", "모르겠어요"], c: 0}
-            ]}
-        ];
+            // 시간 차등 적용 (10, 8, 6, 5초)
+            let sec = 10;
+            if (currentRound > 2) sec = 8;
+            if (currentRound > 4) sec = 6;
+            if (currentRound > 6) sec = 5;
 
-        updateStatus();
-
-        function updateStatus() {
-            document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 단계: " + level;
-        }
-
-        function startSession() {
-            currentRound = 1; sessionSuccess = 0; sessionImages = [];
-            loadQuestion();
-        }
-
-        function getTimerValue(round) {
-            if (round <= 2) return 10;
-            if (round <= 4) return 8;
-            if (round <= 6) return 6;
-            return 5;
-        }
-
-        function loadQuestion() {
-            let theme = questionBank[Math.floor(Math.random() * questionBank.length)];
-            let quizDetail = theme.qs[Math.floor(Math.random() * theme.qs.length)];
+            let theme = themes[Math.floor(Math.random() * themes.length)];
+            // 사진 중복 방지를 위한 랜덤 lock값 사용
+            currentImgUrl = `https://loremflickr.com/640/480/${theme}?lock=${Math.floor(Math.random() * 50000)}`;
             
-            currentQuiz = { kw: theme.kw, q: quizDetail.q, a: quizDetail.a, c: quizDetail.c };
-
-            // 중복 방지 및 전체 풍경이 나오도록 landscape 태그 강조
-            let seed = Math.floor(Math.random() * 50000);
-            let imgUrl = `https://loremflickr.com/600/400/${currentQuiz.kw}?lock=${seed}`;
-            currentQuiz.currentImg = imgUrl;
-
-            let waitTime = getTimerValue(currentRound); 
-
-            document.getElementById("game").innerHTML = `
-                <div class="progress-text">${currentRound} / 10</div>
-                <div class="img-container">
-                    <img src="${imgUrl}" onload="console.log('이미지 로딩 완료')">
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <p style="font-weight:bold; color:#2E7D32;">문제 ${currentRound} / 10</p>
+                    <img src="${currentImgUrl}">
+                    <p class="timer-text">${sec}초 동안 잘 기억하세요!</p>
                 </div>
-                <p class="timer-text"><span class="time-badge">${waitTime}초</span> 동안 전체 상황을 기억하세요!</p>
             `;
-            
-            setTimeout(() => askQuestion(), waitTime * 1000);
+
+            // 지정된 시간 후 질문 화면으로
+            setTimeout(askQuestion, sec * 1000);
         }
 
         function askQuestion() {
-            let optionsHtml = currentQuiz.a.map((ans, idx) => {
-                let color = idx === 2 ? "background:#78909C" : "";
-                return `<button style="${color}" onclick="showReaction(${idx})">${ans}</button>`;
-            }).join('');
-
-            document.getElementById("game").innerHTML = `
+            document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <div class="progress-text">${currentRound} / 10 번째 질문</div>
-                    <div class="question-text">${currentQuiz.q}</div>
-                    ${optionsHtml}
+                    <p style="font-size:1.5em; font-weight:bold; margin-bottom:25px;">방금 보신 사진은<br>'한국의 풍경'이었나요?</p>
+                    <button onclick="handleAnswer(true)">정답!! ⭕ (네)</button>
+                    <button onclick="handleAnswer(false)" style="background:#78909C;">땡!! ❌ (아니요)</button>
                 </div>
             `;
         }
 
-        function showReaction(userChoice) {
-            let isCorrect = (userChoice === currentQuiz.c);
-            sessionImages.push({ url: currentQuiz.currentImg, ok: isCorrect });
+        function handleAnswer(isYes) {
+            // 키워드상 모두 한국 사진이므로 '네'가 정답
+            let isCorrect = (isYes === true);
+            if (isCorrect) score++;
+            history.push({url: currentImgUrl, ok: isCorrect});
 
-            if (isCorrect) {
-                sessionSuccess++;
-                document.getElementById("game").innerHTML = `
-                    <div class="game-box">
-                        <div class="reaction-correct">정답!! ⭕</div>
-                        <div class="reaction-text">정확하게 기억하셨네요!</div>
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <div class="reaction" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
+                        ${isCorrect ? '정답!! ⭕' : '땡!! ❌'}
                     </div>
-                `;
-            } else {
-                document.getElementById("game").innerHTML = `
-                    <div class="game-box">
-                        <div class="reaction-wrong">땡!! ❌</div>
-                        <div class="reaction-text">괜찮아요, 다음 문제로!</div>
-                    </div>
-                `;
-            }
-            setTimeout(() => nextStep(), 1500);
+                    <p style="font-size:1.2em;">${isCorrect ? '기억력이 정말 좋으세요!' : '괜찮아요, 다음 사진 집중!'}</p>
+                </div>
+            `;
+
+            // 1.5초 후 자동으로 다음 문제
+            setTimeout(() => {
+                currentRound++;
+                nextRound();
+            }, 1500);
         }
 
-        function nextStep() {
-            if (currentRound < 10) {
-                currentRound++; loadQuestion();
-            } else {
-                finishSession();
-            }
-        }
-
-        function finishSession() {
-            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
-            rec.push({ d: new Date().toLocaleDateString(), score: sessionSuccess });
-            localStorage.setItem("rec", JSON.stringify(rec));
-
-            if (sessionSuccess >= 8 && level < 4) level++;
-            if (sessionSuccess < 5 && level > 1) level--;
-            day++; 
-            localStorage.setItem("level", level);
-            localStorage.setItem("day", day);
-
-            let reportHtml = sessionImages.map((item, idx) => `
+        function showResult() {
+            let listHtml = history.map((item, idx) => `
                 <div class="report-item">
                     <img src="${item.url}">
                     <div class="result-mark">${item.ok ? '⭕' : '❌'}</div>
+                    <p style="font-size:1.2em; font-weight:bold; margin-top:10px;">${idx + 1}번째 사진</p>
                 </div>
             `).join('');
 
-            document.getElementById("game").innerHTML = `
+            document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <h3>오늘의 훈련 완료!</h3>
-                    <div style="font-size:1.8em; color:#2E7D32; font-weight:bold;">${sessionSuccess * 10}점</div>
-                    <div class="report-grid">${reportHtml}</div>
-                    <button onclick="location.reload()" style="margin-top:20px;">처음 화면으로</button>
+                    <h2 style="color:#2E7D32;">훈련 완료! 점수: ${score * 10}점</h2>
+                    <p style="margin-bottom:20px;">아래 사진들을 보며 복습해 보세요.</p>
+                    ${listHtml}
+                    <button onclick="location.reload()" style="margin-top:20px; background:#1B5E20;">내일 또 하기</button>
                 </div>
             `;
-            updateStatus();
-        }
-
-        function showStats() {
-            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
-            document.getElementById("game").innerHTML = `
-                <div class="game-box" style="text-align:left;">
-                    <h4 style="text-align:center;">누적 기록</h4>
-                    <p>📅 총 훈련 횟수: ${rec.length}회</p>
-                    <p>💡 마지막 점수: ${rec.length > 0 ? (rec[rec.length-1].score * 10) : 0}점</p>
-                    <button onclick="location.reload()">뒤로 가기</button>
-                </div>
-            `;
+            // 결과 화면으로 넘어가면 맨 위로 스크롤
+            window.scrollTo(0,0);
         }
     </script>
 </body>
