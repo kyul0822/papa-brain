@@ -1,0 +1,15 @@
+{
+  "name": "자연 낚시 두뇌",
+  "short_name": "두뇌앱",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#eef5f1",
+  "theme_color": "#2E7D32",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/616/616490.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

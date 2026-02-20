@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자연 낚시 두뇌 앱</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2E7D32">
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #eef5f1; padding: 15px; }
+        button { font-size: 20px; padding: 15px; margin: 10px; width: 95%; border-radius: 10px; border: none; background: #2E7D32; color: white; cursor: pointer; }
+        img { width: 95%; border-radius: 12px; margin-top: 10px; height: 250px; object-fit: cover; }
+        #status { font-weight: bold; margin-bottom: 10px; color: #1B5E20; }
+    </style>
+</head>
+<body>
+    <h2>🎣 자연 · 낚시 두뇌 30일</h2>
+    <div id="status"></div>
+    <div id="game">
+        <button onclick="startGame()">오늘 시작</button>
+        <button onclick="showStats()" style="background:#558B2F;">보호자 분석</button>
+    </div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js');
+        }
+
+        let level = parseInt(localStorage.getItem("level")) || 1;
+        let day = parseInt(localStorage.getItem("day")) || 1;
+        document.getElementById("status").innerHTML = "오늘 " + day + "일차 | 난이도 " + level;
+
+        function startGame() {
+            let keyword = Math.random() > 0.5 ? "nature,forest" : "fishing,fish";
+            // 이미지 소스를 최신 버전으로 수정했습니다.
+            let imgUrl = `https://loremflickr.com/600/400/${keyword}?t=${new Date().getTime()}`;
+            
+            document.getElementById("game").innerHTML = `
+                <img src="${imgUrl}"><br>
+                <p><strong>10초 동안 사진을 잘 기억하세요!</strong></p>
+            `;
+            setTimeout(() => askQuestion(), 10000);
+        }
+
+        function askQuestion() {
+            let q = ["물이 있었나요?", "물고기가 보였나요?", "나무가 있었나요?", "강인가요? 호수인가요?"];
+            document.getElementById("game").innerHTML = `
+                <h3>${q[level-1]}</h3>
+                <button onclick="finish(true)">잘 생각남 😊</button>
+                <button onclick="finish(false)">어려움</button>
+            `;
+        }
+
+        function finish(success) {
+            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
+            rec.push({ d: new Date().toLocaleDateString(), day: day, level: level, ok: success });
+            localStorage.setItem("rec", JSON.stringify(rec));
+
+            if (success && level < 4) level++;
+            if (!success && level > 1) level--;
+            day++; if (day > 30) day = 1;
+
+            localStorage.setItem("level", level);
+            localStorage.setItem("day", day);
+            location.reload();
+        }
+
+        function showStats() {
+            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
+            let successCount = rec.filter(r => r.ok).length;
+            let failCount = rec.filter(r => !r.ok).length;
+            document.getElementById("game").innerHTML = `
+                <div style="background:white; padding:20px; border-radius:15px; margin-top:20px;">
+                    <h4>활동 기록</h4>
+                    <p>성공: ${successCount}회 / 어려움: ${failCount}회</p>
+                    <button onclick="location.reload()">처음으로</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
