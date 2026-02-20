@@ -7,33 +7,37 @@
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background: #f0f7f4; padding: 15px; margin: 0; }
         .game-box { background: white; padding: 25px; border-radius: 20px; margin-top: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); border: 2px solid #d1e7dd; }
-        button { 
+        
+        /* 선택지 버튼 스타일 */
+        .choice-btn { 
+            font-size: 22px; padding: 18px; margin: 8px 0; width: 100%; 
+            border-radius: 12px; border: 2px solid #2E7D32; background: white; color: #2E7D32; 
+            cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .choice-btn:active { background: #E8F5E9; transform: scale(0.98); }
+        
+        /* 시작/다음 버튼 스타일 */
+        .main-btn { 
             font-size: 24px; padding: 22px; margin: 12px 0; width: 100%; 
             border-radius: 15px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
             box-shadow: 0 4px 0 #1b4d21;
         }
-        button:active { transform: translateY(3px); box-shadow: 0 1px 0 #1b4d21; }
+
         img { width: 100%; border-radius: 15px; margin-top: 10px; max-height: 40vh; object-fit: contain; background: #000; }
         .timer-badge { background: #ffeb3b; padding: 5px 15px; border-radius: 10px; color: #d32f2f; font-weight: bold; font-size: 1.3em; border: 2px solid #fbc02d; }
-        
-        /* 피드백 리마인드 스타일 */
-        .feedback-mark { font-size: 5em; font-weight: bold; margin: 10px 0; animation: pop 0.4s; }
-        .remind-text { font-size: 1.2em; color: #333; background: #f9f9f9; padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid #eee; }
-        
-        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
-        
+        .feedback-mark { font-size: 5em; font-weight: bold; margin: 10px 0; }
+        .remind-text { font-size: 1.2em; color: #333; background: #f9f9f9; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #eee; }
         .report-item { margin-bottom: 50px; border-bottom: 2px solid #2E7D32; padding-bottom: 30px; position: relative; }
-        .report-item img { width: 100%; height: auto; border-radius: 15px; }
-        .result-mark { position: absolute; top: 20px; right: 20px; font-size: 80px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 100px; height: 100px; line-height: 100px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: center; }
+        .result-mark { position: absolute; top: 20px; right: 20px; font-size: 80px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 100px; height: 100px; line-height: 100px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <h2 style="color: #1b4d21;">🧠 기억력 훈련</h2>
+    <h2 style="color: #1b4d21;">🧠 동물 이름 맞히기</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">질문과 사진이 잘 맞도록 고치고<br>리마인드 기능을 강화했어요!</p>
-            <button onclick="initGame()">훈련 시작하기</button>
+            <p style="font-size: 1.4em; line-height: 1.6;">사진을 보고 동물의 이름을<br>정확하게 골라보세요!</p>
+            <button class="main-btn" onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
 
@@ -41,74 +45,87 @@
         let currentRound = 1;
         let score = 0;
         let history = [];
-        let usedSeeds = [];
         let currentQuizData = {};
 
-        // 오답률 개선을 위해 사진이 아주 명확하게 나오는 테마들로 구성
-        const quizBank = [
-            { theme: "nature,mountain,forest", q: "방금 사진에 '초록색 나무나 산'이 있었나요?", a: true },
-            { theme: "dog,puppy", q: "사진 속에 귀여운 '강아지'가 있었나요?", a: true },
-            { theme: "underwater,fish,sea", q: "사진 속 장소가 '물속이나 바다'였나요?", a: true },
-            { theme: "baby,kids,playing", q: "사진 속에 '아이들'이 보였나요?", a: true },
-            { theme: "cat,kitten,animal", q: "사진 속에 '고양이'가 있었나요?", a: true },
-            { theme: "ocean,beach,sand", q: "시원한 '바다나 모래사장'이 있었나요?", a: true },
-            { theme: "flower,rose,garden", q: "예쁘게 핀 '꽃'이나 '정원'이었나요?", a: true }
+        const animalBank = [
+            { name: "강아지", theme: "dog" },
+            { name: "고양이", theme: "cat" },
+            { name: "수달", theme: "otter" },
+            { name: "물개", theme: "seal" },
+            { name: "코끼리", theme: "elephant" },
+            { name: "코뿔소", theme: "rhino" },
+            { name: "호랑이", theme: "tiger" },
+            { name: "사자", theme: "lion" },
+            { name: "기린", theme: "giraffe" },
+            { name: "판다", theme: "panda" }
         ];
 
         function initGame() {
-            currentRound = 1; score = 0; history = []; usedSeeds = [];
+            currentRound = 1; score = 0; history = [];
             nextRound();
         }
 
         function nextRound() {
             if (currentRound > 10) { showResult(); return; }
-            let sec = (currentRound <= 3) ? 10 : (currentRound <= 7) ? 8 : 6;
-            let seed;
-            do { seed = Math.floor(Math.random() * 100000); } while (usedSeeds.includes(seed));
-            usedSeeds.push(seed);
+            
+            // 문제 섞기
+            let target = animalBank[Math.floor(Math.random() * animalBank.length)];
+            let seed = Math.floor(Math.random() * 100000);
+            let imgUrl = `https://loremflickr.com/800/600/${target.theme}?lock=${seed}`;
+            
+            // 오답 보기 생성 (정답 제외 3개 추출)
+            let distractors = animalBank
+                .filter(a => a.name !== target.name)
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 3)
+                .map(a => a.name);
+            
+            // 보기 4개 섞기
+            let choices = [...distractors, target.name].sort(() => 0.5 - Math.random());
+            
+            currentQuizData = { url: imgUrl, name: target.name, choices: choices };
 
-            // 현재 돌아가는 코드의 핵심 로직 그대로 사용
-            let qItem = quizBank[Math.floor(Math.random() * quizBank.length)];
-            let imgUrl = `https://loremflickr.com/800/600/${qItem.theme}?lock=${seed}`;
-            currentQuizData = { url: imgUrl, q: qItem.q, correct: qItem.a };
-
+            // 1단계: 사진 보여주기
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-weight:bold; color:#2E7D32; font-size:1.2em;">${currentRound} / 10 번째</p>
+                    <p style="font-weight:bold; color:#2E7D32;">${currentRound} / 10 번째</p>
                     <img src="${imgUrl}">
-                    <p style="margin-top:15px;"><span class="timer-badge">${sec}초</span> 동안 잘 보세요!</p>
+                    <p style="margin-top:15px;"><span class="timer-badge">기억하세요!</span></p>
                 </div>
             `;
-            setTimeout(askQuestion, sec * 1000);
+            
+            // 3초 후 질문 던지기 (사진을 보면서 바로 맞히도록 수정)
+            setTimeout(askQuestion, 3000);
         }
 
         function askQuestion() {
+            let choiceButtons = currentQuizData.choices.map(choice => 
+                `<button class="choice-btn" onclick="handleAnswer('${choice}')">${choice}</button>`
+            ).join('');
+
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-size:1.7em; font-weight:bold; margin-bottom:30px; line-height:1.4;">${currentQuizData.q}</p>
-                    <button onclick="handleAnswer(true)">네, 맞아요</button>
-                    <button onclick="handleAnswer(false)" style="background:#78909C; margin-top:5px;">아니요, 없어요</button>
+                    <p style="font-size:1.6em; font-weight:bold; margin-bottom:20px;">이 동물의 이름은 무엇인가요?</p>
+                    <img src="${currentQuizData.url}" style="max-height: 25vh; margin-bottom:20px;">
+                    ${choiceButtons}
                 </div>
             `;
         }
 
         function handleAnswer(userAns) {
-            let isCorrect = (userAns === currentQuizData.correct);
+            let isCorrect = (userAns === currentQuizData.name);
             if (isCorrect) score++;
-            history.push({url: currentQuizData.url, ok: isCorrect, q: currentQuizData.q});
+            history.push({url: currentQuizData.url, ok: isCorrect, name: currentQuizData.name});
 
-            // 피드백 + 사진 리마인드 (요청하신 기능 유지)
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
-                        ${isCorrect ? '정답!! ⭕' : '땡!! ❌'}
+                        ${isCorrect ? '정답!! ⭕' : '아쉬워요! ❌'}
                     </div>
-                    <img src="${currentQuizData.url}" style="max-height: 25vh; border: 3px solid ${isCorrect ? '#2E7D32' : '#d32f2f'};">
                     <div class="remind-text">
-                        질문: <strong>${currentQuizData.q}</strong><br>
-                        <span style="color:${isCorrect?'#2E7D32':'#d32f2f'}">${isCorrect ? '잘 기억하셨어요!' : '사진을 다시 확인해보세요!'}</span>
+                        이 동물은 <b>${currentQuizData.name}</b>입니다.<br>
+                        <span style="font-size:0.9em; color:#666;">잠시 후 다음 문제가 나옵니다.</span>
                     </div>
-                    <p style="font-size:1.1em; color:#666; margin-top:15px;">잠시 후 다음 문제가 나옵니다...</p>
                 </div>
             `;
             
@@ -120,17 +137,17 @@
                 <div class="report-item">
                     <img src="${item.url}">
                     <div class="result-mark" style="color:${item.ok ? '#2E7D32' : '#d32f2f'}">${item.ok ? '⭕' : '❌'}</div>
-                    <p style="font-size:1.3em; font-weight:bold; margin-top:20px;">${idx+1}번 질문: ${item.q}</p>
+                    <p style="font-size:1.3em; font-weight:bold; margin-top:20px;">정답: ${item.name}</p>
                 </div>
             `).join('');
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <h2 style="color:#2E7D32; font-size:2.2em;">최종 점수: ${score * 10}점</h2>
-                    <p>전체 결과를 다시 확인하며 복습해 보세요.</p>
+                    <p>오늘 만난 동물 친구들입니다.</p>
                     <hr style="border:1px solid #eee; margin:20px 0;">
                     ${listHtml}
-                    <button onclick="location.reload()" style="background:#1B5E20; margin-top:20px;">한 번 더 하기</button>
+                    <button class="main-btn" onclick="location.reload()">한 번 더 하기</button>
                 </div>
             `;
             window.scrollTo(0,0);
