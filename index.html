@@ -31,11 +31,12 @@
         .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; margin-top: 10px; }
         .question-text { font-size: 1.5em; font-weight: bold; color: #333; margin-bottom: 25px; line-height: 1.5; }
 
-        .reaction-correct { font-size: 3em; color: #2E7D32; font-weight: bold; margin: 20px 0; }
-        .reaction-wrong { font-size: 3em; color: #d32f2f; font-weight: bold; margin: 20px 0; }
+        /* 리액션 스타일 */
+        .reaction-correct { font-size: 3.5em; color: #2E7D32; font-weight: bold; margin: 10px 0; }
+        .reaction-wrong { font-size: 3.5em; color: #d32f2f; font-weight: bold; margin: 10px 0; }
+        .reaction-text { font-size: 1.3em; color: #333; margin-bottom: 20px; font-weight: bold; }
         
-        /* 시간 안내 강조 */
-        .time-badge { background: #ffeb3b; padding: 2px 8px; border-radius: 5px; color: #000; }
+        .time-badge { background: #ffeb3b; padding: 2px 10px; border-radius: 8px; color: #000; border: 2px solid #fbc02d; }
     </style>
 </head>
 <body>
@@ -63,10 +64,10 @@
             { kw: "korea,mountain", q: "사진 속 산에 '물(계곡/강)'이 보였나요?", a: ["네, 있어요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 },
             { kw: "korea,river", q: "사진 속 물가 주변에 '나무'가 있었나요?", a: ["예, 있어요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 },
             { kw: "korean,children,play", q: "사진 속 아이들이 무엇을 하고 있었나요?", a: ["놀고 있어요", "공부해요", "잠자고 있어요"], correctIdx: 0 },
-            { kw: "korean,people", q: "사진 속에 사람이 몇 명 있었나요?", a: ["여러 명 있어요", "한 명도 없어요", "기억이 안 나요"], correctIdx: 0 },
-            { kw: "korea,sea", q: "사진 속 장소는 어디인가요?", a: ["푸른 바다", "깊은 산속", "도심 빌딩"], correctIdx: 0 },
-            { kw: "korean,food", q: "사진에 음식이 있었나요?", a: ["네, 있어요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 },
-            { kw: "korea,village", q: "사진 속에 '집'이 보였나요?", a: ["네, 보여요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 }
+            { kw: "korean,people", q: "사진 속에 사람이 여러 명 있었나요?", a: ["네, 많아요", "아니요, 혼자에요", "기억이 안 나요"], correctIdx: 0 },
+            { kw: "korea,sea", q: "사진 속 장소는 '바다'가 맞나요?", a: ["네, 바다에요", "아니요, 산이에요", "기억이 안 나요"], correctIdx: 0 },
+            { kw: "korean,food", q: "사진에 맛있는 '음식'이 있었나요?", a: ["네, 있어요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 },
+            { kw: "korea,village", q: "사진 속에 '집'이나 '건물'이 보였나요?", a: ["네, 보여요", "아니요, 없어요", "기억이 안 나요"], correctIdx: 0 }
         ];
 
         updateStatus();
@@ -81,7 +82,7 @@
             loadQuestion();
         }
 
-        // 라운드별 기억 시간 계산 함수
+        // 라운드별 시간 설정 (요청하신 대로 적용)
         function getTimerValue(round) {
             if (round <= 2) return 10;
             if (round <= 4) return 8;
@@ -92,6 +93,103 @@
         function loadQuestion() {
             currentType = questionBank[Math.floor(Math.random() * questionBank.length)];
             let imgUrl = `https://loremflickr.com/600/400/${currentType.kw}?t=${new Date().getTime() + currentRound}`;
-            let waitTime = getTimerValue(currentRound); // 현재 라운드에 맞는 시간 가져오기
+            let waitTime = getTimerValue(currentRound); 
             
-            document.getElementById("
+            document.getElementById("game").innerHTML = `
+                <div class="progress-text">${currentRound} / 10</div>
+                <div class="img-container">
+                    <img src="${imgUrl}">
+                </div>
+                <p class="timer-text"><span class="time-badge">${waitTime}초</span> 동안 잘 보세요!</p>
+            `;
+            
+            setTimeout(() => askQuestion(), waitTime * 1000);
+        }
+
+        function askQuestion() {
+            let optionsHtml = currentType.a.map((ans, idx) => {
+                let color = idx === 2 ? "background:#78909C" : "";
+                return `<button style="${color}" onclick="showReaction(${idx})">${ans}</button>`;
+            }).join('');
+
+            document.getElementById("game").innerHTML = `
+                <div class="game-box">
+                    <div class="progress-text">${currentRound} / 10 번째 질문</div>
+                    <div class="question-text">${currentType.q}</div>
+                    ${optionsHtml}
+                </div>
+            `;
+        }
+
+        // ★ 정답/오답 리액션 화면 처리 ★
+        function showReaction(userChoice) {
+            let isCorrect = (userChoice === currentType.correctIdx);
+            let reactionHtml = "";
+
+            if (isCorrect) {
+                sessionSuccess++;
+                reactionHtml = `
+                    <div class="game-box">
+                        <div class="reaction-correct">정답!! ⭕</div>
+                        <div class="reaction-text">아버님, 정말 대단하세요!</div>
+                        <button onclick="nextStep()">다음 문제로 고고!</button>
+                    </div>
+                `;
+            } else {
+                reactionHtml = `
+                    <div class="game-box">
+                        <div class="reaction-wrong">땡!! ❌</div>
+                        <div class="reaction-text">아쉽네요. 다음 사진은 더 잘 보실 거죠?</div>
+                        <button onclick="nextStep()" style="background:#78909C">다음 문제로 넘어가기</button>
+                    </div>
+                `;
+            }
+            document.getElementById("game").innerHTML = reactionHtml;
+        }
+
+        function nextStep() {
+            if (currentRound < 10) {
+                currentRound++;
+                loadQuestion();
+            } else {
+                finishSession();
+            }
+        }
+
+        function finishSession() {
+            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
+            rec.push({ d: new Date().toLocaleDateString(), score: sessionSuccess });
+            localStorage.setItem("rec", JSON.stringify(rec));
+
+            if (sessionSuccess >= 8 && level < 4) level++;
+            if (sessionSuccess < 5 && level > 1) level--;
+            
+            day++; 
+            localStorage.setItem("level", level);
+            localStorage.setItem("day", day);
+
+            document.getElementById("game").innerHTML = `
+                <div class="game-box">
+                    <h3>오늘의 훈련 완료!</h3>
+                    <div style="font-size:1.8em; margin:20px 0; color:#2E7D32;">참 잘하셨습니다!</div>
+                    <p style="font-size:1.3em;">오늘의 기억 점수: <strong>${sessionSuccess * 10}점</strong></p>
+                    <button onclick="location.reload()">처음 화면으로</button>
+                </div>
+            `;
+            updateStatus();
+        }
+
+        function showStats() {
+            let rec = JSON.parse(localStorage.getItem("rec") || "[]");
+            document.getElementById("game").innerHTML = `
+                <div class="game-box" style="text-align:left;">
+                    <h4 style="text-align:center;">누적 기록</h4>
+                    <p>📅 총 훈련 횟수: ${rec.length}회</p>
+                    <p>💡 마지막 점수: ${rec.length > 0 ? (rec[rec.length-1].score * 10) : 0}점</p>
+                    <button onclick="location.reload()">뒤로 가기</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
