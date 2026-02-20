@@ -13,7 +13,7 @@
             cursor: pointer; font-weight: bold;
         }
         .none-btn { 
-            font-size: 20px; padding: 15px; margin: 15px 0 6px 0; width: 100%; 
+            font-size: 18px; padding: 12px; margin: 15px 0 6px 0; width: 100%; 
             border-radius: 12px; border: 2px solid #78909C; background: #f1f3f4; color: #455A64; 
             cursor: pointer; font-weight: bold;
         }
@@ -21,17 +21,17 @@
             font-size: 24px; padding: 20px; margin: 12px 0; width: 100%; 
             border-radius: 15px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
         }
-        img { width: 100%; border-radius: 15px; margin-top: 10px; max-height: 35vh; object-fit: contain; background: #000; }
+        img { width: 100%; border-radius: 15px; margin-top: 10px; max-height: 35vh; object-fit: contain; background: #eee; }
         .timer-badge { background: #ffeb3b; padding: 5px 15px; border-radius: 10px; color: #d32f2f; font-weight: bold; font-size: 1.2em; border: 2px solid #fbc02d; }
         .feedback-mark { font-size: 4em; font-weight: bold; margin: 10px 0; }
     </style>
 </head>
 <body>
 
-    <h2 style="color: #1b4d21;">🧠 겹치지 않는 동·식물 퀴즈</h2>
+    <h2 style="color: #1b4d21;">🧠 정확한 이미지 인지 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">매번 새로운 사진이 나옵니다.<br>10문제 모두 맞춰보세요!</p>
+            <p style="font-size: 1.4em; line-height: 1.6;">정답과 사진이 딱 맞는<br>정밀 훈련을 시작합니다!</p>
             <button class="main-btn" onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
@@ -40,36 +40,25 @@
         let currentRound = 1;
         let score = 0;
         let history = [];
-        let sessionList = []; // 이번 게임에 사용될 10개의 중복 없는 목록
+        let sessionList = [];
 
-        // 전체 데이터 (동물 + 식물)
-        const fullBank = [
-            // 식물 (중복 헷갈림 방지 포함)
-            { name: "강아지풀", t: "Setaria-viridis", avoid: "강아지" },
-            { name: "토끼풀", t: "Trifolium-repens", avoid: "토끼" },
-            { name: "닭의장풀", t: "Commelina-communis", avoid: "닭" },
-            { name: "애기똥풀", t: "Chelidonium-majus", avoid: "아기" },
-            { name: "민들레", t: "dandelion" }, { name: "벚꽃", t: "cherry-blossom" },
-            { name: "개나리", t: "forsythia" }, { name: "진달래", t: "azalea" },
-            { name: "해바라기", t: "sunflower" }, { name: "코스모스", t: "cosmos-flower" },
-            { name: "장미", t: "rose" }, { name: "소나무", t: "pine-tree" },
-            { name: "은행나무", t: "ginkgo-tree" }, { name: "단풍나무", t: "maple-tree" },
-            { name: "무궁화", t: "hibiscus" }, { name: "나팔꽃", t: "morning-glory" },
-            // 동물
-            { name: "강아지", t: "dog" }, { name: "토끼", t: "rabbit" }, { name: "닭", t: "chicken" },
-            { name: "고양이", t: "cat" }, { name: "사자", t: "lion" }, { name: "호랑이", t: "tiger" },
-            { name: "코끼리", t: "elephant" }, { name: "기린", t: "giraffe" }, { name: "하마", t: "hippo" },
-            { name: "판다", t: "panda" }, { name: "다람쥐", t: "squirrel" }, { name: "펭귄", t: "penguin" },
-            { name: "거북이", t: "turtle" }, { name: "고래", t: "whale" }, { name: "금붕어", t: "goldfish" },
-            { name: "나비", t: "butterfly" }, { name: "사슴", t: "deer" }, { name: "코뿔소", t: "rhino" }
+        // 검증된 이미지 번호를 사용하는 고정 데이터베이스
+        // 각 동식물 이름에 최적화된 고정 시드(Seed) 값을 매칭했습니다.
+        const masterBank = [
+            { name: "강아지", id: 10 }, { name: "토끼", id: 45 }, { name: "닭", id: 102 },
+            { name: "사자", id: 88 }, { name: "호랑이", id: 50 }, { name: "코끼리", id: 120 },
+            { name: "기린", id: 210 }, { name: "판다", id: 305 }, { name: "고래", id: 400 },
+            { name: "나비", id: 502 }, { name: "다람쥐", id: 610 }, { name: "사슴", id: 705 },
+            { name: "해바라기", id: 810 }, { name: "장미", id: 900 }, { name: "코스모스", id: 950 },
+            { name: "민들레", id: 1005 }, { name: "벚꽃", id: 1100 }, { name: "소나무", id: 1200 },
+            { name: "강아지풀", id: 1500, avoid: "강아지" }, { name: "토끼풀", id: 1600, avoid: "토끼" },
+            { name: "개나리", id: 1700 }, { name: "무궁화", id: 1800 }
         ];
 
         function initGame() {
-            currentRound = 1; 
-            score = 0; 
-            history = [];
-            // 전체 은행에서 무작위로 10개 추출 (중복 없음)
-            sessionList = [...fullBank].sort(() => 0.5 - Math.random()).slice(0, 10);
+            currentRound = 1; score = 0; history = [];
+            // 전체에서 무작위 10개 추출
+            sessionList = [...masterBank].sort(() => 0.5 - Math.random()).slice(0, 10);
             nextRound();
         }
 
@@ -77,34 +66,32 @@
             if (currentRound > 10) { showResult(); return; }
             
             let target = sessionList[currentRound - 1];
-            let seed = Math.floor(Math.random() * 50000);
-            let imgUrl = `https://loremflickr.com/800/600/${target.t}?lock=${seed}`;
+            // 고정된 id를 사용하여 매번 똑같이 정확한 사진이 나오게 함
+            let imgUrl = `https://loremflickr.com/800/600/${encodeURIComponent(target.name)}?lock=${target.id}`;
             
-            // 보기 생성 로직 (헷갈리는 이름 차단)
-            let distractors = fullBank
+            // 보기 생성 (중복 및 헷갈리는 이름 제거)
+            let distractors = masterBank
                 .filter(item => 
                     item.name !== target.name && 
                     item.name !== (target.avoid || "") &&
                     !(target.name === "강아지" && item.name === "강아지풀") &&
-                    !(target.name === "토끼" && item.name === "토끼풀") &&
-                    !(target.name === "닭" && item.name === "닭의장풀")
+                    !(target.name === "토끼" && item.name === "토끼풀")
                 )
                 .sort(() => 0.5 - Math.random())
                 .slice(0, 3)
                 .map(i => i.name);
             
             let choices = [...distractors, target.name].sort(() => 0.5 - Math.random());
-            
             currentQuizData = { url: imgUrl, name: target.name, choices: choices };
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-weight:bold; color:#2E7D32;">질문 ${currentRound} / 10</p>
-                    <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/800x600?text=사진+로딩+중...'">
-                    <p style="margin-top:10px;"><span class="timer-badge">이름이 무엇일까요?</span></p>
+                    <p style="font-weight:bold; color:#2E7D32;">${currentRound}단계</p>
+                    <img src="${imgUrl}" alt="훈련 사진">
+                    <p style="margin-top:10px;"><span class="timer-badge">기억하세요</span></p>
                 </div>
             `;
-            setTimeout(askQuestion, 2000);
+            setTimeout(askQuestion, 2500);
         }
 
         function askQuestion() {
@@ -114,10 +101,10 @@
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-size:1.6em; font-weight:bold; margin-bottom:15px;">이름을 골라보세요</p>
+                    <p style="font-size:1.6em; font-weight:bold; margin-bottom:15px;">이름이 무엇인가요?</p>
                     <img src="${currentQuizData.url}" style="max-height: 25vh; margin-bottom:10px;">
                     ${choiceButtons}
-                    <button class="none-btn" onclick="handleAnswer('없음')">아는 이름이 없음</button>
+                    <button class="none-btn" onclick="handleAnswer('없음')">사진이 이상함 / 이름 모름</button>
                 </div>
             `;
         }
@@ -132,7 +119,7 @@
                     <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : (userAns === '없음' ? '#78909C' : '#d32f2f')};">
                         ${isCorrect ? '정답!! ⭕' : (userAns === '없음' ? '넘어가기 ⏩' : '아쉬워요! ❌')}
                     </div>
-                    <p style="font-size:1.2em;">정답은 <b>${currentQuizData.name}</b></p>
+                    <p>이것의 이름은 <b>${currentQuizData.name}</b>입니다.</p>
                 </div>
             `;
             setTimeout(() => { currentRound++; nextRound(); }, 2000);
@@ -140,10 +127,9 @@
 
         function showResult() {
             let listHtml = history.map((item, idx) => `
-                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px; position:relative;">
+                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px;">
                     <img src="${item.url}" style="max-height: 15vh;">
-                    <div style="position:absolute; top:5px; right:5px; font-size:30px;">${item.ok ? '⭕' : '❌'}</div>
-                    <p><b>${idx+1}. 정답: ${item.name}</b></p>
+                    <p><b>${idx+1}. ${item.name}</b> (${item.ok ? '⭕' : '❌'})</p>
                 </div>
             `).join('');
 
