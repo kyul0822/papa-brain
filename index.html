@@ -31,7 +31,7 @@
     <h2 style="color: #2E7D32;">🧠 기억력 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.2em;">새로운 사진들로 훈련을 시작할까요?</p>
+            <p style="font-size: 1.2em;">매번 다른 질문과 사진으로 시작할까요?</p>
             <button onclick="initGame()">오늘의 훈련 시작</button>
         </div>
     </div>
@@ -40,45 +40,75 @@
         let currentRound = 1;
         let score = 0;
         let history = [];
-        let currentImgUrl = "";
-        let usedSeeds = []; // 사용된 사진 고유 번호를 저장하는 배열
+        let usedSeeds = [];
+        let currentQuizData = {};
 
-        const themes = ["korea,mountain,nature", "korea,river,scenery", "korea,palace,architecture", "korean,village,countryside", "korea,seoul,landscape"];
+        // 질문 데이터 세트 (테마별 질문 다양화)
+        const quizBank = [
+            { 
+                theme: "korea,mountain", 
+                questions: [
+                    { q: "사진 속에 '계곡물'이나 '강'이 있었나요?", a: true },
+                    { q: "산에 '바위'보다 '푸른 나무'가 많았나요?", a: true }
+                ]
+            },
+            { 
+                theme: "korea,palace", 
+                questions: [
+                    { q: "사진에 '기와지붕' 건물이 있었나요?", a: true },
+                    { q: "건물 주변에 '사람들'이 많이 있었나요?", a: true }
+                ]
+            },
+            { 
+                theme: "korea,river,fishing", 
+                questions: [
+                    { q: "물가에서 '낚시'하는 사람이 보였나요?", a: true },
+                    { q: "물 위에 '배'가 떠 있었나요?", a: true }
+                ]
+            },
+            { 
+                theme: "korean,village", 
+                questions: [
+                    { q: "마을 길가에 '논'이나 '밭'이 있었나요?", a: true },
+                    { q: "마을 골목에 '자동차'가 세워져 있었나요?", a: true }
+                ]
+            },
+            { 
+                theme: "korea,park,family", 
+                questions: [
+                    { q: "공원에 '꽃'이나 '잔디'가 많이 보였나요?", a: true },
+                    { q: "사진 속에 '어린아이'의 모습이 있었나요?", a: true }
+                ]
+            }
+        ];
 
         function initGame() {
-            currentRound = 1;
-            score = 0;
-            history = [];
-            usedSeeds = []; // 게임 시작 시 초기화
+            currentRound = 1; score = 0; history = []; usedSeeds = [];
             nextRound();
         }
 
         function nextRound() {
-            if (currentRound > 10) {
-                showResult();
-                return;
-            }
+            if (currentRound > 10) { showResult(); return; }
 
-            let sec = 10;
-            if (currentRound > 2) sec = 8;
-            if (currentRound > 4) sec = 6;
-            if (currentRound > 6) sec = 5;
+            let sec = (currentRound <= 2) ? 10 : (currentRound <= 4) ? 8 : (currentRound <= 6) ? 6 : 5;
 
-            // 중복되지 않는 고유 번호(seed) 생성
+            // 중복 방지 로직
             let seed;
-            do {
-                seed = Math.floor(Math.random() * 100000);
-            } while (usedSeeds.includes(seed)); // 이미 사용된 번호면 다시 뽑기
-            
-            usedSeeds.push(seed); // 사용된 번호 목록에 추가
+            do { seed = Math.floor(Math.random() * 100000); } while (usedSeeds.includes(seed));
+            usedSeeds.push(seed);
 
-            let theme = themes[Math.floor(Math.random() * themes.length)];
-            currentImgUrl = `https://loremflickr.com/640/480/${theme}?lock=${seed}`;
+            // 랜덤 테마 및 그 테마 안의 랜덤 질문 선택
+            let bankItem = quizBank[Math.floor(Math.random() * quizBank.length)];
+            let qItem = bankItem.questions[Math.floor(Math.random() * bankItem.questions.length)];
             
+            let imgUrl = `https://loremflickr.com/640/480/${bankItem.theme}?lock=${seed}`;
+            
+            currentQuizData = { url: imgUrl, q: qItem.q, correct: qItem.a };
+
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <p style="font-weight:bold; color:#2E7D32;">문제 ${currentRound} / 10</p>
-                    <img src="${currentImgUrl}">
+                    <img src="${imgUrl}">
                     <p class="timer-text">${sec}초 동안 잘 기억하세요!</p>
                 </div>
             `;
@@ -89,31 +119,28 @@
         function askQuestion() {
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-size:1.5em; font-weight:bold; margin-bottom:25px;">방금 보신 사진은<br>'한국의 풍경'이었나요?</p>
-                    <button onclick="handleAnswer(true)">정답!! ⭕ (네)</button>
-                    <button onclick="handleAnswer(false)" style="background:#78909C;">땡!! ❌ (아니요)</button>
+                    <p style="font-size:1.5em; font-weight:bold; margin-bottom:25px;">${currentQuizData.q}</p>
+                    <button onclick="handleAnswer(true)">네, 맞아요</button>
+                    <button onclick="handleAnswer(false)" style="background:#78909C;">아니요, 없어요</button>
                 </div>
             `;
         }
 
-        function handleAnswer(isYes) {
-            let isCorrect = (isYes === true);
+        function handleAnswer(userAns) {
+            let isCorrect = (userAns === currentQuizData.correct);
             if (isCorrect) score++;
-            history.push({url: currentImgUrl, ok: isCorrect});
+            history.push({url: currentQuizData.url, ok: isCorrect, q: currentQuizData.q});
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <div class="reaction" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
                         ${isCorrect ? '정답!! ⭕' : '땡!! ❌'}
                     </div>
-                    <p style="font-size:1.2em;">${isCorrect ? '훌륭합니다! 다음 사진도 힘내세요!' : '아쉽네요! 다음엔 더 집중해봐요!'}</p>
+                    <p style="font-size:1.2em;">${isCorrect ? '참 잘하셨어요!' : '다음 사진을 더 잘 기억해봐요!'}</p>
                 </div>
             `;
 
-            setTimeout(() => {
-                currentRound++;
-                nextRound();
-            }, 1500);
+            setTimeout(() => { currentRound++; nextRound(); }, 1500);
         }
 
         function showResult() {
@@ -121,16 +148,16 @@
                 <div class="report-item">
                     <img src="${item.url}">
                     <div class="result-mark">${item.ok ? '⭕' : '❌'}</div>
-                    <p style="font-size:1.2em; font-weight:bold; margin-top:10px;">${idx + 1}번째 사진</p>
+                    <p style="font-size:1.1em; font-weight:bold; margin-top:10px;">${idx + 1}번 질문: ${item.q}</p>
                 </div>
             `).join('');
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <h2 style="color:#2E7D32;">훈련 완료! 점수: ${score * 10}점</h2>
-                    <p>오늘 본 사진들을 다시 확인해 보세요.</p>
+                    <h2 style="color:#2E7D32;">훈련 완료! ${score * 10}점</h2>
+                    <p>아래 사진들과 질문을 다시 확인해 보세요.</p>
                     ${listHtml}
-                    <button onclick="location.reload()" style="margin-top:20px; background:#1B5E20;">처음 화면으로</button>
+                    <button onclick="location.reload()" style="margin-top:20px; background:#1B5E20;">다시 시작하기</button>
                 </div>
             `;
             window.scrollTo(0,0);
