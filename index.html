@@ -11,17 +11,18 @@
             font-size: 22px; padding: 18px; margin: 10px 0; width: 100%; 
             border-radius: 12px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
         }
+        button:active { background: #1B5E20; transform: scale(0.98); }
         img { width: 100%; border-radius: 10px; margin-top: 10px; max-height: 50vh; object-fit: contain; background: #000; }
         .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; margin: 10px 0; }
         .reaction { font-size: 3.5em; font-weight: bold; margin: 20px 0; }
         
-        /* 결과 화면 사진 크게 보기 스타일 */
         .report-item { margin-bottom: 40px; border-bottom: 3px solid #2E7D32; padding-bottom: 20px; position: relative; text-align: center; }
         .report-item img { width: 100%; height: auto; max-height: 300px; object-fit: cover; border-radius: 12px; }
         .result-mark { 
             position: absolute; top: 20px; right: 20px; font-size: 60px; 
             background: rgba(255,255,255,0.9); border-radius: 50%; 
             width: 80px; height: 80px; line-height: 80px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            text-align: center;
         }
     </style>
 </head>
@@ -30,7 +31,7 @@
     <h2 style="color: #2E7D32;">🧠 기억력 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.2em;">아버님, 오늘 훈련을 시작할까요?</p>
+            <p style="font-size: 1.2em;">새로운 사진들로 훈련을 시작할까요?</p>
             <button onclick="initGame()">오늘의 훈련 시작</button>
         </div>
     </div>
@@ -40,14 +41,15 @@
         let score = 0;
         let history = [];
         let currentImgUrl = "";
+        let usedSeeds = []; // 사용된 사진 고유 번호를 저장하는 배열
 
-        // 한국적인 풍경 테마
-        const themes = ["korea,mountain,landscape", "korea,river,nature", "korea,palace,architecture", "korean,village,scenery"];
+        const themes = ["korea,mountain,nature", "korea,river,scenery", "korea,palace,architecture", "korean,village,countryside", "korea,seoul,landscape"];
 
         function initGame() {
             currentRound = 1;
             score = 0;
             history = [];
+            usedSeeds = []; // 게임 시작 시 초기화
             nextRound();
         }
 
@@ -57,15 +59,21 @@
                 return;
             }
 
-            // 시간 차등 적용 (10, 8, 6, 5초)
             let sec = 10;
             if (currentRound > 2) sec = 8;
             if (currentRound > 4) sec = 6;
             if (currentRound > 6) sec = 5;
 
+            // 중복되지 않는 고유 번호(seed) 생성
+            let seed;
+            do {
+                seed = Math.floor(Math.random() * 100000);
+            } while (usedSeeds.includes(seed)); // 이미 사용된 번호면 다시 뽑기
+            
+            usedSeeds.push(seed); // 사용된 번호 목록에 추가
+
             let theme = themes[Math.floor(Math.random() * themes.length)];
-            // 사진 중복 방지를 위한 랜덤 lock값 사용
-            currentImgUrl = `https://loremflickr.com/640/480/${theme}?lock=${Math.floor(Math.random() * 50000)}`;
+            currentImgUrl = `https://loremflickr.com/640/480/${theme}?lock=${seed}`;
             
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
@@ -75,7 +83,6 @@
                 </div>
             `;
 
-            // 지정된 시간 후 질문 화면으로
             setTimeout(askQuestion, sec * 1000);
         }
 
@@ -90,7 +97,6 @@
         }
 
         function handleAnswer(isYes) {
-            // 키워드상 모두 한국 사진이므로 '네'가 정답
             let isCorrect = (isYes === true);
             if (isCorrect) score++;
             history.push({url: currentImgUrl, ok: isCorrect});
@@ -100,11 +106,10 @@
                     <div class="reaction" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
                         ${isCorrect ? '정답!! ⭕' : '땡!! ❌'}
                     </div>
-                    <p style="font-size:1.2em;">${isCorrect ? '기억력이 정말 좋으세요!' : '괜찮아요, 다음 사진 집중!'}</p>
+                    <p style="font-size:1.2em;">${isCorrect ? '훌륭합니다! 다음 사진도 힘내세요!' : '아쉽네요! 다음엔 더 집중해봐요!'}</p>
                 </div>
             `;
 
-            // 1.5초 후 자동으로 다음 문제
             setTimeout(() => {
                 currentRound++;
                 nextRound();
@@ -123,12 +128,11 @@
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <h2 style="color:#2E7D32;">훈련 완료! 점수: ${score * 10}점</h2>
-                    <p style="margin-bottom:20px;">아래 사진들을 보며 복습해 보세요.</p>
+                    <p>오늘 본 사진들을 다시 확인해 보세요.</p>
                     ${listHtml}
-                    <button onclick="location.reload()" style="margin-top:20px; background:#1B5E20;">내일 또 하기</button>
+                    <button onclick="location.reload()" style="margin-top:20px; background:#1B5E20;">처음 화면으로</button>
                 </div>
             `;
-            // 결과 화면으로 넘어가면 맨 위로 스크롤
             window.scrollTo(0,0);
         }
     </script>
