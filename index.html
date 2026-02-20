@@ -4,100 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>기억하기</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2E7D32">
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background: #eef5f1; padding: 15px; margin: 0; word-break: keep-all; }
-        h2 { color: #2E7D32; margin-top: 20px; }
-        #status { font-weight: bold; margin-bottom: 10px; color: #1B5E20; font-size: 1.1em; }
-        
-        .img-container {
-            width: 100%; background: #000; border-radius: 12px; overflow: hidden;
-            margin-top: 10px; min-height: 250px; display: flex; align-items: center; justify-content: center;
-        }
-        img { width: 100%; height: auto; max-height: 50vh; display: block; object-fit: contain; }
-
-        .game-box { background: white; padding: 25px; border-radius: 15px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        
+        body { font-family: sans-serif; text-align: center; background: #eef5f1; padding: 15px; margin: 0; }
+        .game-box { background: white; padding: 20px; border-radius: 15px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         button { 
             font-size: 22px; padding: 18px; margin: 10px 0; width: 100%; 
-            border-radius: 12px; border: none; background: #2E7D32; color: white; 
-            cursor: pointer; font-weight: bold;
+            border-radius: 12px; border: none; background: #2E7D32; color: white; cursor: pointer; font-weight: bold;
         }
-        button:active { background: #1B5E20; transform: scale(0.98); }
-        
-        .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; margin-top: 10px; }
-        .question-text { font-size: 1.5em; font-weight: bold; color: #333; margin-bottom: 25px; line-height: 1.4; }
-
-        .reaction-correct { font-size: 4em; color: #2E7D32; font-weight: bold; margin: 20px 0; }
-        .reaction-wrong { font-size: 4em; color: #d32f2f; font-weight: bold; margin: 20px 0; }
-        
-        .report-item { background: #fff; border-radius: 12px; padding: 10px; margin-bottom: 20px; border: 2px solid #ddd; position: relative; }
-        .report-item img { width: 100%; height: auto; max-height: 200px; object-fit: cover; border-radius: 8px; }
-        .result-badge { position: absolute; top: 15px; right: 15px; font-size: 40px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 55px; height: 55px; line-height: 55px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        
-        .time-badge { background: #ffeb3b; padding: 2px 10px; border-radius: 8px; color: #000; border: 2px solid #fbc02d; }
+        img { width: 100%; border-radius: 10px; margin-top: 10px; max-height: 50vh; object-fit: contain; background: #000; }
+        .timer-text { font-size: 1.3em; color: #d32f2f; font-weight: bold; }
+        .reaction { font-size: 4em; font-weight: bold; margin: 20px 0; }
+        .report-item { margin-bottom: 30px; border-bottom: 2px solid #ddd; padding-bottom: 10px; position: relative; }
+        .result-mark { position: absolute; top: 10px; right: 10px; font-size: 50px; background: rgba(255,255,255,0.8); border-radius: 50%; width: 60px; height: 60px; line-height: 60px; }
     </style>
 </head>
 <body>
 
-    <h2>🧠 기억하기</h2>
-    <div id="status">오늘도 힘차게 시작해 보세요!</div>
-
-    <div id="game">
-        <button onclick="startSession()">오늘의 훈련 시작 (10문제)</button>
-        <button onclick="showStats()" style="background:#f1f1f1; color:#333; font-size:16px;">기록 보기</button>
+    <h2 style="color: #2E7D32;">🧠 기억력 훈련</h2>
+    <div id="game-area">
+        <button onclick="initGame()">오늘의 훈련 시작</button>
     </div>
 
     <script>
-        let level = parseInt(localStorage.getItem("level")) || 1;
-        let day = parseInt(localStorage.getItem("day")) || 1;
-        let currentRound = 0;
-        let sessionSuccess = 0;
-        let sessionImages = [];
-        let currentQuiz = {};
+        let currentRound = 1;
+        let score = 0;
+        let history = [];
+        let currentImgUrl = "";
+        let currentCorrect = 0;
 
-        const questionBank = [
-            { kw: "korea,mountain,nature", qs: [{q: "산에 '계곡물'이 흐르고 있었나요?", a: ["네, 보여요", "아니요, 산만 보여요", "모르겠어요"], c: 0}] },
-            { kw: "korea,fishing,river", qs: [{q: "물가에서 '낚시'하는 사람이 보였나요?", a: ["네, 보여요", "아니요, 없어요", "모르겠어요"], c: 0}] },
-            { kw: "korea,palace,temple", qs: [{q: "사진에 '기와지붕' 건물이 있었나요?", a: ["네, 기와집이에요", "아니요, 현대식 건물이에요", "모르겠어요"], c: 0}] },
-            { kw: "korean,children,park", qs: [{q: "아이들의 모습이 사진에 보였나요?", a: ["네, 보여요", "아니요, 어른뿐이에요", "모르겠어요"], c: 0}] },
-            { kw: "korea,village,farm", qs: [{q: "집 주변에 '논'이나 '밭'이 보였나요?", a: ["네, 보여요", "아니요, 보이지 않아요", "모르겠어요"], c: 0}] }
-        ];
+        // 아버님께 익숙한 한국적 키워드
+        const themes = ["korea,mountain", "korea,river", "korea,palace", "korean,food", "korea,village"];
 
-        function startSession() {
-            currentRound = 1; sessionSuccess = 0; sessionImages = [];
-            loadQuestion();
+        function initGame() {
+            currentRound = 1;
+            score = 0;
+            history = [];
+            nextRound();
         }
 
-        function getTimerValue(round) {
-            if (round <= 2) return 10;
-            if (round <= 4) return 8;
-            if (round <= 6) return 6;
-            return 5;
-        }
+        function nextRound() {
+            if (currentRound > 10) {
+                showResult();
+                return;
+            }
 
-        function loadQuestion() {
-            let theme = questionBank[Math.floor(Math.random() * questionBank.length)];
-            let quizDetail = theme.qs[0];
-            let seed = Math.floor(Math.random() * 99999);
-            // 한국 풍경 사진을 가져오는 더 확실한 키워드 조합
-            let imgUrl = `https://loremflickr.com/640/480/korea,${theme.kw}?lock=${seed}`;
+            // 시간 차등 적용 (10, 8, 6, 5초)
+            let sec = 10;
+            if (currentRound > 2) sec = 8;
+            if (currentRound > 4) sec = 6;
+            if (currentRound > 6) sec = 5;
+
+            let theme = themes[Math.floor(Math.random() * themes.length)];
+            currentImgUrl = `https://loremflickr.com/640/480/${theme}?lock=${Math.floor(Math.random() * 1000)}`;
             
-            currentQuiz = { url: imgUrl, q: quizDetail.q, a: quizDetail.a, c: quizDetail.c };
-            let waitTime = getTimerValue(currentRound);
-
-            document.getElementById("game").innerHTML = `
-                <div style="font-weight:bold; color:#2E7D32;">${currentRound} / 10</div>
-                <div class="img-container"><img src="${imgUrl}" id="mainImg" onerror="this.src='https://via.placeholder.com/600x400?text=사진+로딩+중...'"></div>
-                <p class="timer-text"><span class="time-badge">${waitTime}초</span> 동안 잘 기억하세요!</p>
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <h3>제 ${currentRound}문</h3>
+                    <img src="${currentImgUrl}">
+                    <p class="timer-text">${sec}초 동안 기억하세요!</p>
+                </div>
             `;
-            
-            setTimeout(() => askQuestion(), waitTime * 1000);
+
+            setTimeout(askQuestion, sec * 1000);
         }
 
         function askQuestion() {
-            let btns = currentQuiz.a.map((ans, idx) => `<button onclick="showReaction(${idx})">${ans}</button>`).join('');
-            document.getElementById("game").innerHTML = `
+            // 질문은 단순하게 변별력 있게 고정
+            const qText = "이 사진은 '한국'과 관련된 풍경인가요?";
+            currentCorrect = 0; // '네'가 정답 (한국 키워드로 가져오므로)
+
+            document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <div class="question-text
+                    <p style="font-size:1.4em; font-weight:bold;">${qText}</p>
+                    <button onclick="handleAnswer(0)">네, 맞아요</button>
+                    <button onclick="handleAnswer(1)" style="background:#d32f2f;">아니요, 아니에요</button>
+                </div>
+            `;
+        }
+
+        function handleAnswer(ans) {
+            let isOk = (ans === currentCorrect);
+            if (isOk) score++;
+            history.push({url: currentImgUrl, ok: isOk});
+
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <div class="reaction">${isOk ? '정답!! ⭕' : '땡!! ❌'}</div>
+                    <p>${isOk ? '참 잘하셨어요!' : '괜찮아요, 다음 문제!'}</p>
+                </div>
+            `;
+
+            setTimeout(() => {
+                currentRound++;
+                nextRound();
+            }, 1500);
+        }
+
+        function showResult() {
+            let listHtml = history.map((item, idx) => `
+                <div class="report-item">
+                    <img src="${item.url}">
+                    <div class="result-mark">${item.ok ? '⭕' : '❌'}</div>
+                    <p><strong>${idx + 1}번 사진</strong></p>
+                </div>
+            `).join('');
+
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <h2>훈련 종료! 점수: ${score * 10}점</h2>
+                    <button onclick="location.reload()">다시 시작하기</button>
+                    <hr>
+                    ${listHtml}
+                </div>
+            `;
+            window.scrollTo(0,0);
+        }
+    </script>
+</body>
+</html>
