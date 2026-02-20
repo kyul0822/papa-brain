@@ -7,13 +7,9 @@
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background: #f0f7f4; padding: 15px; margin: 0; }
         .game-box { background: white; padding: 25px; border-radius: 20px; margin-top: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); border: 2px solid #d1e7dd; }
-        .choice-btn { 
-            font-size: 20px; padding: 16px; margin: 6px 0; width: 100%; 
-            border-radius: 12px; border: 2px solid #2E7D32; background: white; color: #2E7D32; 
-            cursor: pointer; font-weight: bold;
-        }
+        .choice-btn { font-size: 20px; padding: 16px; margin: 6px 0; width: 100%; border-radius: 12px; border: 2px solid #2E7D32; background: white; color: #2E7D32; cursor: pointer; font-weight: bold; }
         .none-btn { font-size: 18px; padding: 12px; margin-top: 15px; width: 100%; border-radius: 12px; border: 1px solid #78909C; background: #f1f3f4; color: #455A64; cursor: pointer; }
-        .main-btn { font-size: 24px; padding: 20px; width: 100%; border-radius: 15px; border: none; background: #2E7D32; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #1b4d21; }
+        .main-btn { font-size: 24px; padding: 20px; width: 100%; border-radius: 15px; border: none; background: #2E7D32; color: white; font-weight: bold; cursor: pointer; }
         img { width: 100%; border-radius: 15px; margin-top: 10px; max-height: 38vh; object-fit: contain; background: #eee; }
         .timer-badge { background: #ffeb3b; padding: 5px 15px; border-radius: 10px; color: #d32f2f; font-weight: bold; font-size: 1.2em; }
         .feedback-mark { font-size: 4em; font-weight: bold; margin: 10px 0; }
@@ -21,11 +17,11 @@
 </head>
 <body>
 
-    <h2 style="color: #1b4d21;">🧠 맞춤형 인지 훈련</h2>
+    <h2 style="color: #1b4d21;">🧠 무오류 두뇌 훈련 (보완판)</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">아버님께 딱 맞는 사진들로만<br>훈련 세트가 구성됩니다.</p>
-            <button class="main-btn" onclick="initGame()">훈련 시작하기</button>
+            <p style="font-size: 1.4em; line-height: 1.6;">최근 정답 제외 기능과<br>이미지 차단 기능이 강화되었습니다.</p>
+            <button class="main-btn" onclick="initGame()">새 훈련 시작하기</button>
         </div>
     </div>
 
@@ -54,37 +50,30 @@
         function initGame() {
             currentRound = 1; score = 0; history = [];
             
-            let usedNames = JSON.parse(localStorage.getItem('usedQuizNames') || "[]");
-            let badImages = JSON.parse(localStorage.getItem('badImages') || "{}"); // { "이미지URL": 횟수 }
+            // 1. 저장된 데이터 가져오기 (사용 기록, 블랙리스트)
+            let usedNames = JSON.parse(localStorage.getItem('usedNames_v2') || "[]");
+            let blackList = JSON.parse(localStorage.getItem('blackImages_v2') || "[]");
 
-            // 1. 최근 사용된 이름 제외 + 불량 사진 제외 로직
-            let availableBank = masterBank.map(item => {
-                // 각 항목의 ids 중 불량 목록에 없는 것만 필터링
+            // 2. 가용 가능한 리스트 필터링 (최근 20개 정답 제외 + 블랙리스트 사진 제외)
+            let filteredBank = masterBank.map(item => {
                 let safeIds = item.ids.filter(id => {
                     let url = `https://loremflickr.com/800/600/${encodeURIComponent(item.name)}?lock=${id}`;
-                    return (badImages[url] || 0) < 2;
+                    return !blackList.includes(url);
                 });
                 return { ...item, ids: safeIds };
             }).filter(item => item.ids.length > 0 && !usedNames.includes(item.name));
 
-            if (availableBank.length < 10) {
+            // 만약 남은 문제가 부족하면 기록 초기화 (순환)
+            if (filteredBank.length < 10) {
                 usedNames = [];
-                localStorage.setItem('usedQuizNames', JSON.stringify([]));
-                // 문제가 부족하면 다시 전체에서 검색
-                availableBank = masterBank.filter(item => {
-                    let safeIds = item.ids.filter(id => {
-                        let url = `https://loremflickr.com/800/600/${encodeURIComponent(item.name)}?lock=${id}`;
-                        return (badImages[url] || 0) < 2;
-                    });
-                    return safeIds.length > 0;
-                });
+                filteredBank = masterBank.filter(item => item.ids.length > 0);
             }
 
-            sessionList = availableBank.sort(() => 0.5 - Math.random()).slice(0, 10);
-
-            let newUsedNames = [...usedNames, ...sessionList.map(item => item.name)];
-            if (newUsedNames.length > 20) newUsedNames = newUsedNames.slice(newUsedNames.length - 20);
-            localStorage.setItem('usedQuizNames', JSON.stringify(newUsedNames));
+            // 3. 10개 추출 및 기록 업데이트
+            sessionList = filteredBank.sort(() => 0.5 - Math.random()).slice(0, 10);
+            let updatedUsed = [...usedNames, ...sessionList.map(i => i.name)];
+            if (updatedUsed.length > 20) updatedUsed = updatedUsed.slice(-20); // 최근 20개 유지
+            localStorage.setItem('usedNames_v2', JSON.stringify(updatedUsed));
 
             nextRound();
         }
@@ -92,7 +81,6 @@
         function nextRound() {
             if (currentRound > 10) { showResult(); return; }
             let target = sessionList[currentRound - 1];
-            // 필터링된 안전한 ID 중 랜덤 선택
             let selectedId = target.ids[Math.floor(Math.random() * target.ids.length)];
             let imgUrl = `https://loremflickr.com/800/600/${encodeURIComponent(target.name)}?lock=${selectedId}`;
             
@@ -103,13 +91,13 @@
                 .map(i => i.name);
             
             let choices = [...distractors, target.name].sort(() => 0.5 - Math.random());
-            currentQuizData = { url: imgUrl, name: target.name, choices: choices, id: selectedId };
+            currentQuizData = { url: imgUrl, name: target.name, choices: choices };
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <p style="font-weight:bold; color:#2E7D32;">${currentRound}단계</p>
                     <img src="${imgUrl}">
-                    <p style="margin-top:10px;"><span class="timer-badge">기억하세요</span></p>
+                    <p style="margin-top:10px;"><span class="timer-badge">잘 기억하세요</span></p>
                 </div>
             `;
             setTimeout(askQuestion, 2500);
@@ -122,10 +110,10 @@
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
-                    <p style="font-size:1.65em; font-weight:bold; margin-bottom:15px; color:#1b4d21;">이것의 이름은?</p>
+                    <p style="font-size:1.6em; font-weight:bold; margin-bottom:15px;">이것은 무엇인가요?</p>
                     <img src="${currentQuizData.url}" style="max-height: 25vh; margin-bottom:10px;">
                     ${choiceButtons}
-                    <button class="none-btn" onclick="handleAnswer('없음')">사진이 이상하거나 모름</button>
+                    <button class="none-btn" onclick="handleAnswer('없음')">사진이 이상하거나 모름 (차단)</button>
                 </div>
             `;
         }
@@ -134,11 +122,13 @@
             let isCorrect = (userAns === currentQuizData.name);
             let isNone = (userAns === '없음');
 
-            // [핵심] '없음'을 눌렀을 때 불량 이미지 점수 가산
             if (isNone) {
-                let badImages = JSON.parse(localStorage.getItem('badImages') || "{}");
-                badImages[currentQuizData.url] = (badImages[currentQuizData.url] || 0) + 1;
-                localStorage.setItem('badImages', JSON.stringify(badImages));
+                // 즉시 블랙리스트 추가
+                let blackList = JSON.parse(localStorage.getItem('blackImages_v2') || "[]");
+                if (!blackList.includes(currentQuizData.url)) {
+                    blackList.push(currentQuizData.url);
+                    localStorage.setItem('blackImages_v2', JSON.stringify(blackList));
+                }
             }
 
             if (isCorrect) score++;
@@ -147,9 +137,9 @@
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : (isNone ? '#78909C' : '#d32f2f')};">
-                        ${isCorrect ? '정답!! ⭕' : (isNone ? '사진 제외 중.. ⏩' : '아쉬워요! ❌')}
+                        ${isCorrect ? '정답!! ⭕' : (isNone ? '차단 완료 ⏩' : '아쉬워요! ❌')}
                     </div>
-                    <p style="font-size:1.3em;">정답은 <b>[ ${currentQuizData.name} ]</b></p>
+                    <p>정답: <b>${currentQuizData.name}</b></p>
                 </div>
             `;
             setTimeout(() => { currentRound++; nextRound(); }, 2000);
@@ -159,17 +149,17 @@
             let listHtml = history.map((item, idx) => `
                 <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px; position:relative;">
                     <img src="${item.url}" style="max-height: 15vh;">
-                    <div style="position:absolute; top:5px; right:5px; font-size:30px;">${item.ok ? '⭕' : (item.none ? '❓' : '❌')}</div>
-                    <p style="margin-top:10px;"><b>${idx+1}. 정답: ${item.name}</b></p>
+                    <div style="position:absolute; top:5px; right:5px; font-size:30px;">${item.ok ? '⭕' : (item.none ? '🚫' : '❌')}</div>
+                    <p><b>${idx+1}. 정답: ${item.name}</b></p>
                 </div>
             `).join('');
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <h2 style="color:#2E7D32; font-size:2em;">최종 점수: ${score * 10}점</h2>
-                    <p style="font-size:0.9em; color:#666;">'없음'을 두 번 누른 사진은 다시 나오지 않습니다.</p>
+                    <p style="font-size:0.9em;">차단한 사진은 다시 나오지 않습니다.</p>
                     <hr>${listHtml}
-                    <button class="main-btn" onclick="location.reload()">다시 시작하기</button>
+                    <button class="main-btn" onclick="location.reload()">새 게임 시작</button>
                 </div>
             `;
             window.scrollTo(0,0);
