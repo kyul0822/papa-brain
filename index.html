@@ -147,4 +147,33 @@
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : (isNone ? '#78909C' : '#d32f2f')};">
-                        ${isCorrect ? '정답!! ⭕' : (isNone ? '
+                        ${isCorrect ? '정답!! ⭕' : (isNone ? '사진 제외 중.. ⏩' : '아쉬워요! ❌')}
+                    </div>
+                    <p style="font-size:1.3em;">정답은 <b>[ ${currentQuizData.name} ]</b></p>
+                </div>
+            `;
+            setTimeout(() => { currentRound++; nextRound(); }, 2000);
+        }
+
+        function showResult() {
+            let listHtml = history.map((item, idx) => `
+                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px; position:relative;">
+                    <img src="${item.url}" style="max-height: 15vh;">
+                    <div style="position:absolute; top:5px; right:5px; font-size:30px;">${item.ok ? '⭕' : (item.none ? '❓' : '❌')}</div>
+                    <p style="margin-top:10px;"><b>${idx+1}. 정답: ${item.name}</b></p>
+                </div>
+            `).join('');
+
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <h2 style="color:#2E7D32; font-size:2em;">최종 점수: ${score * 10}점</h2>
+                    <p style="font-size:0.9em; color:#666;">'없음'을 두 번 누른 사진은 다시 나오지 않습니다.</p>
+                    <hr>${listHtml}
+                    <button class="main-btn" onclick="location.reload()">다시 시작하기</button>
+                </div>
+            `;
+            window.scrollTo(0,0);
+        }
+    </script>
+</body>
+</html>
