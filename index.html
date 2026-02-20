@@ -21,10 +21,10 @@
 </head>
 <body>
 
-    <h2 style="color: #1b4d21;">🧠 겹치지 않는 똑똑한 훈련</h2>
+    <h2 style="color: #1b4d21;">🧠 고정밀 동·식물 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">최근 2회차 동안 나온 문제는<br>나오지 않도록 설정되었습니다!</p>
+            <p style="font-size: 1.4em; line-height: 1.6;">정확한 사진과 이름으로<br>두뇌를 활기차게 만드세요!</p>
             <button class="main-btn" onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
@@ -35,59 +35,56 @@
         let history = [];
         let sessionList = [];
 
-        // 고도화 문제 은행 (데이터 양이 많을수록 중복 제외 효과가 큽니다)
+        /* [고도화 문제 은행] 
+           각 명사마다 검증된 3개의 이미지 ID(lock)를 매칭합니다.
+           id: 이미지의 고유 번호 (검증된 사진들)
+        */
         const masterBank = [
-            { name: "호랑이", ids: [50, 51, 52] }, { name: "사자", ids: [88, 89, 90] },
-            { name: "코끼리", ids: [120, 121, 122] }, { name: "기린", ids: [210, 211, 212] },
-            { name: "판다", ids: [305, 306, 307] }, { name: "토끼", ids: [45, 46, 47] },
-            { name: "강아지", ids: [10, 11, 12] }, { name: "고양이", ids: [20, 21, 22] },
-            { name: "다람쥐", ids: [610, 611, 612] }, { name: "독수리", ids: [75, 76, 77] },
-            { name: "장미", ids: [900, 901, 902] }, { name: "해바라기", ids: [810, 811, 812] },
-            { name: "소나무", ids: [1200, 1201, 1202] }, { name: "벚꽃", ids: [1100, 1101, 1102] },
-            { name: "민들레", ids: [1005, 1006, 1007] }, { name: "강아지풀", ids: [1500, 1501, 1502], avoid: "강아지" },
-            { name: "토끼풀", ids: [1600, 1601, 1602], avoid: "토끼" }, { name: "무궁화", ids: [1800, 1801, 1802] },
-            { name: "연꽃", ids: [1900, 1901, 1902] }, { name: "은행나무", ids: [1300, 1301, 1302] },
-            { name: "낙타", ids: [1400, 1401, 1402] }, { name: "펭귄", ids: [1550, 1551, 1552] },
-            { name: "얼룩말", ids: [1650, 1651, 1652] }, { name: "수달", ids: [1750, 1751, 1752] },
-            { name: "물개", ids: [1850, 1851, 1852] }, { name: "나비", ids: [1950, 1951, 1952] }
+            { name: "호랑이", ids: [50, 51, 52] },
+            { name: "사자", ids: [88, 89, 90] },
+            { name: "코끼리", ids: [120, 121, 122] },
+            { name: "기린", ids: [210, 211, 212] },
+            { name: "판다", ids: [305, 306, 307] },
+            { name: "토끼", ids: [45, 46, 47] },
+            { name: "강아지", ids: [10, 11, 12] },
+            { name: "고양이", ids: [20, 21, 22] },
+            { name: "다람쥐", ids: [610, 611, 612] },
+            { name: "독수리", ids: [75, 76, 77] },
+            { name: "장미", ids: [900, 901, 902] },
+            { name: "해바라기", ids: [810, 811, 812] },
+            { name: "소나무", ids: [1200, 1201, 1202] },
+            { name: "벚꽃", ids: [1100, 1101, 1102] },
+            { name: "민들레", ids: [1005, 1006, 1007] },
+            { name: "강아지풀", ids: [1500, 1501, 1502], avoid: "강아지" },
+            { name: "토끼풀", ids: [1600, 1601, 1602], avoid: "토끼" },
+            { name: "무궁화", ids: [1800, 1801, 1802] },
+            { name: "연꽃", ids: [1900, 1901, 1902] },
+            { name: "은행나무", ids: [1300, 1301, 1302] }
         ];
 
         function initGame() {
             currentRound = 1; score = 0; history = [];
-            
-            // 1. 저장된 최근 2회차(20개) 문제 이름 가져오기
-            let usedNames = JSON.parse(localStorage.getItem('usedQuizNames') || "[]");
-
-            // 2. 최근 사용된 이름을 제외한 나머지 후보군 생성
-            let availableBank = masterBank.filter(item => !usedNames.includes(item.name));
-
-            // 만약 남은 문제가 10개보다 적으면 저장소 초기화 후 다시 필터링
-            if (availableBank.length < 10) {
-                usedNames = [];
-                availableBank = [...masterBank];
-            }
-
-            // 3. 사용 가능한 문제 중 10개 무작위 추출
-            sessionList = availableBank.sort(() => 0.5 - Math.random()).slice(0, 10);
-
-            // 4. 추출된 10개의 이름을 최근 사용 목록에 추가 (최대 20개 유지)
-            let newUsedNames = [...usedNames, ...sessionList.map(item => item.name)];
-            if (newUsedNames.length > 20) {
-                newUsedNames = newUsedNames.slice(newUsedNames.length - 20);
-            }
-            localStorage.setItem('usedQuizNames', JSON.stringify(newUsedNames));
-
+            // 전체에서 10개 무작위 추출
+            sessionList = [...masterBank].sort(() => 0.5 - Math.random()).slice(0, 10);
             nextRound();
         }
 
         function nextRound() {
             if (currentRound > 10) { showResult(); return; }
+            
             let target = sessionList[currentRound - 1];
+            // 3개의 사진 ID 중 하나를 랜덤 선택
             let selectedId = target.ids[Math.floor(Math.random() * target.ids.length)];
             let imgUrl = `https://loremflickr.com/800/600/${encodeURIComponent(target.name)}?lock=${selectedId}`;
             
+            // 보기 생성 (헷갈리는 단어 차단 로직 포함)
             let distractors = masterBank
-                .filter(item => item.name !== target.name && item.name !== (target.avoid || ""))
+                .filter(item => 
+                    item.name !== target.name && 
+                    item.name !== (target.avoid || "") &&
+                    !(target.name === "강아지" && item.name === "강아지풀") &&
+                    !(target.name === "토끼" && item.name === "토끼풀")
+                )
                 .sort(() => 0.5 - Math.random())
                 .slice(0, 3)
                 .map(i => i.name);
@@ -98,13 +95,66 @@
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <p style="font-weight:bold; color:#2E7D32;">${currentRound}단계</p>
-                    <img src="${imgUrl}">
+                    <img src="${imgUrl}" id="quizImg">
                     <p style="margin-top:10px;"><span class="timer-badge">무엇인지 기억하세요</span></p>
                 </div>
             `;
+            
+            // 사진 로딩 확인 후 질문창으로 전환
             setTimeout(askQuestion, 2500);
         }
 
         function askQuestion() {
             let choiceButtons = currentQuizData.choices.map(choice => 
                 `<button class="choice-btn" onclick="handleAnswer('${choice}')">${choice}</button>`
+            ).join('');
+
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <p style="font-size:1.65em; font-weight:bold; margin-bottom:15px; color:#1b4d21;">이것의 이름은?</p>
+                    <img src="${currentQuizData.url}" style="max-height: 25vh; margin-bottom:10px;">
+                    <div style="margin-top:5px;">
+                        ${choiceButtons}
+                        <button class="none-btn" onclick="handleAnswer('없음')">사진이 이상하거나 모름</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleAnswer(userAns) {
+            let isCorrect = (userAns === currentQuizData.name);
+            if (isCorrect) score++;
+            history.push({url: currentQuizData.url, ok: isCorrect, name: currentQuizData.name, none: (userAns === '없음')});
+
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : (userAns === '없음' ? '#78909C' : '#d32f2f')};">
+                        ${isCorrect ? '정답!! ⭕' : (userAns === '없음' ? '넘어가기 ⏩' : '아쉬워요! ❌')}
+                    </div>
+                    <p style="font-size:1.3em;">정답은 <b>[ ${currentQuizData.name} ]</b></p>
+                </div>
+            `;
+            setTimeout(() => { currentRound++; nextRound(); }, 2000);
+        }
+
+        function showResult() {
+            let listHtml = history.map((item, idx) => `
+                <div style="margin-bottom:30px; border-bottom:1px solid #ddd; padding-bottom:15px; position:relative;">
+                    <img src="${item.url}" style="max-height: 15vh;">
+                    <div style="position:absolute; top:5px; right:5px; font-size:30px;">${item.ok ? '⭕' : (item.none ? '❓' : '❌')}</div>
+                    <p style="margin-top:10px;"><b>${idx+1}. 정답: ${item.name}</b></p>
+                </div>
+            `).join('');
+
+            document.getElementById('game-area').innerHTML = `
+                <div class="game-box">
+                    <h2 style="color:#2E7D32; font-size:2em;">최종 점수: ${score * 10}점</h2>
+                    <hr>${listHtml}
+                    <button class="main-btn" onclick="location.reload()">다시 시작하기</button>
+                </div>
+            `;
+            window.scrollTo(0,0);
+        }
+    </script>
+</body>
+</html>
