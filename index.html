@@ -32,7 +32,7 @@
     <h2 style="color: #1b4d21;">🧠 기억력 훈련</h2>
     <div id="game-area">
         <div class="game-box">
-            <p style="font-size: 1.4em; line-height: 1.6;">정답 확인 시 사진을 한 번 더<br>보여드리는 기능을 넣었어요!</p>
+            <p style="font-size: 1.4em; line-height: 1.6;">질문과 사진이 잘 맞도록 고치고<br>리마인드 기능을 강화했어요!</p>
             <button onclick="initGame()">훈련 시작하기</button>
         </div>
     </div>
@@ -44,13 +44,15 @@
         let usedSeeds = [];
         let currentQuizData = {};
 
+        // 오답률 개선을 위해 사진이 아주 명확하게 나오는 테마들로 구성
         const quizBank = [
-            { theme: "nature,forest,mountain", q: "방금 본 사진에 '나무나 산'이 있었나요?", a: true },
-            { theme: "dog,puppy,animal", q: "사진 속에 귀여운 '강아지'가 있었나요?", a: true },
-            { theme: "underwater,fish,sea", q: "사진 속 장소가 '물속'이나 '바다'였나요?", a: true },
-            { theme: "children,kids,playing", q: "사진 속에 '아이들'이 보였나요?", a: true },
-            { theme: "cat,kitten,pet", q: "사진 속에 귀여운 '고양이'가 있었나요?", a: true },
-            { theme: "ocean,beach,sea", q: "시원한 '바다'나 '모래사장'이 있었나요?", a: true }
+            { theme: "nature,mountain,forest", q: "방금 사진에 '초록색 나무나 산'이 있었나요?", a: true },
+            { theme: "dog,puppy", q: "사진 속에 귀여운 '강아지'가 있었나요?", a: true },
+            { theme: "underwater,fish,sea", q: "사진 속 장소가 '물속이나 바다'였나요?", a: true },
+            { theme: "baby,kids,playing", q: "사진 속에 '아이들'이 보였나요?", a: true },
+            { theme: "cat,kitten,animal", q: "사진 속에 '고양이'가 있었나요?", a: true },
+            { theme: "ocean,beach,sand", q: "시원한 '바다나 모래사장'이 있었나요?", a: true },
+            { theme: "flower,rose,garden", q: "예쁘게 핀 '꽃'이나 '정원'이었나요?", a: true }
         ];
 
         function initGame() {
@@ -65,6 +67,7 @@
             do { seed = Math.floor(Math.random() * 100000); } while (usedSeeds.includes(seed));
             usedSeeds.push(seed);
 
+            // 현재 돌아가는 코드의 핵심 로직 그대로 사용
             let qItem = quizBank[Math.floor(Math.random() * quizBank.length)];
             let imgUrl = `https://loremflickr.com/800/600/${qItem.theme}?lock=${seed}`;
             currentQuizData = { url: imgUrl, q: qItem.q, correct: qItem.a };
@@ -94,7 +97,7 @@
             if (isCorrect) score++;
             history.push({url: currentQuizData.url, ok: isCorrect, q: currentQuizData.q});
 
-            // 정답/오답과 함께 사진+질문 리마인드
+            // 피드백 + 사진 리마인드 (요청하신 기능 유지)
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <div class="feedback-mark" style="color: ${isCorrect ? '#2E7D32' : '#d32f2f'};">
@@ -103,13 +106,12 @@
                     <img src="${currentQuizData.url}" style="max-height: 25vh; border: 3px solid ${isCorrect ? '#2E7D32' : '#d32f2f'};">
                     <div class="remind-text">
                         질문: <strong>${currentQuizData.q}</strong><br>
-                        <span style="color:${isCorrect?'#2E7D32':'#d32f2f'}">${isCorrect ? '맞게 기억하셨어요!' : '사진을 다시 확인해보세요!'}</span>
+                        <span style="color:${isCorrect?'#2E7D32':'#d32f2f'}">${isCorrect ? '잘 기억하셨어요!' : '사진을 다시 확인해보세요!'}</span>
                     </div>
                     <p style="font-size:1.1em; color:#666; margin-top:15px;">잠시 후 다음 문제가 나옵니다...</p>
                 </div>
             `;
             
-            // 리마인드를 위해 대기 시간을 2.5초로 늘림
             setTimeout(() => { currentRound++; nextRound(); }, 2500);
         }
 
@@ -118,14 +120,14 @@
                 <div class="report-item">
                     <img src="${item.url}">
                     <div class="result-mark" style="color:${item.ok ? '#2E7D32' : '#d32f2f'}">${item.ok ? '⭕' : '❌'}</div>
-                    <p style="font-size:1.3em; font-weight:bold; margin-top:20px;">질문: ${item.q}</p>
+                    <p style="font-size:1.3em; font-weight:bold; margin-top:20px;">${idx+1}번 질문: ${item.q}</p>
                 </div>
             `).join('');
 
             document.getElementById('game-area').innerHTML = `
                 <div class="game-box">
                     <h2 style="color:#2E7D32; font-size:2.2em;">최종 점수: ${score * 10}점</h2>
-                    <p>전체 결과를 확인해 보세요.</p>
+                    <p>전체 결과를 다시 확인하며 복습해 보세요.</p>
                     <hr style="border:1px solid #eee; margin:20px 0;">
                     ${listHtml}
                     <button onclick="location.reload()" style="background:#1B5E20; margin-top:20px;">한 번 더 하기</button>
